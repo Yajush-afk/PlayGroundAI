@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: hsl(240 10% 4%);
+  --color-foreground: hsl(0 0% 98%);
+  
+  --color-card: hsl(240 10% 8%);
+  --color-card-foreground: hsl(0 0% 98%);
+  
+  --color-popover: hsl(240 10% 8%);
+  --color-popover-foreground: hsl(0 0% 98%);
+  
+  --color-primary: hsl(210 40% 98%);
+  --color-primary-foreground: hsl(222.2 47.4% 11.2%);
+  
+  --color-secondary: hsl(240 10% 12%);
+  --color-secondary-foreground: hsl(0 0% 98%);
+  
+  --color-muted: hsl(240 10% 12%);
+  --color-muted-foreground: hsl(240 5% 65%);
+  
+  --color-accent: hsl(240 10% 16%);
+  --color-accent-foreground: hsl(0 0% 98%);
+  
+  --color-destructive: hsl(0 63% 31%);
+  --color-destructive-foreground: hsl(0 0% 98%);
+  
+  --color-border: hsl(240 10% 20%);
+  --color-input: hsl(240 10% 16%);
+  --color-ring: hsl(240 5% 84%);
+  
+  --radius: 0.75rem;
+}
+
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: var(--color-border, currentColor);
+  }
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  letter-spacing: -0.015em;
+}
+
+::selection {
+  background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+/* Custom Scrollbar for sleekness */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted-foreground);
+}
+
+/* Typing Indicator Animation */
+@keyframes blink {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes breath {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(5deg); }
+  75% { transform: rotate(-5deg); }
+}
+
+@keyframes flicker {
+  0%, 100% { 
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.6), 0 -5px 20px rgba(249, 115, 22, 0.4);
+    border-color: rgba(249, 115, 22, 0.8);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 -4px 15px rgba(239, 68, 68, 0.9), 0 -12px 30px rgba(249, 115, 22, 0.8), 0 0 25px rgba(254, 215, 170, 0.5);
+    border-color: rgba(239, 68, 68, 1);
+    transform: scale(1.02);
+  }
+}
+
+.animate-blink {
+  animation: blink 1s infinite;
+}
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+.animate-breath {
+  animation: breath 3s ease-in-out infinite;
+}
+.animate-sway {
+  animation: sway 5s ease-in-out infinite;
+}
+.hover\:animate-flicker:hover {
+  animation: flicker 0.4s ease-in-out infinite alternate;
+  background: linear-gradient(180deg, #ea580c, #b91c1c);
+  color: white;
+}
