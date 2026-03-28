@@ -11,39 +11,94 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const buildJudgePrompt = (
+      topic: string,
+      transcriptLines: string
+    ) => `
+You are the JUDGE of a structured AI debate. Your job is to evaluate fairly, 
+rigorously, and without bias toward any political or philosophical position.
+
+DEBATE TOPIC: "${topic}"
+
+FULL TRANSCRIPT:
+${transcriptLines}
+
+YOUR EVALUATION TASK:
+Score each participant — Aria, Lex, Sage, Rex — on these 4 dimensions (1–10 each):
+
+- logic: Did they make internally consistent, well-structured arguments?
+- clarity: Were their points easy to follow and clearly expressed?
+- evidence: Did they use facts, examples, history, or data to support claims?
+- engagement: Did they meaningfully respond to what OTHER participants actually said?
+  (Penalise anyone who ignored opponents and just repeated themselves.)
+
+IMPORTANT FAIRNESS RULES:
+- You must not favour any political or ideological position.
+- A well-argued conservative point scores the same as a well-argued progressive one.
+- Penalise weak reasoning regardless of which side it comes from.
+- Reward participants who acknowledged their own weaknesses and addressed them.
+- Reward participants who directly named and challenged opponents — that is genuine debate.
+- A participant who made 2 excellent points beats one who made 5 mediocre ones.
+
+SUMMARY INSTRUCTIONS:
+Write a 4-5 sentence summary that:
+- Identifies the strongest moment of the debate
+- Names the winner and explains specifically why they won
+- Acknowledges the strongest point made by the runner-up
+- Is completely neutral in tone — do not editorialize on the topic itself
+
+Return ONLY a valid JSON object. No markdown, no explanation, no text outside the JSON:
+
+{
+  "summary": "<4-5 sentence neutral summary>",
+  "winner": "<Aria | Lex | Sage | Rex>",
+  "strongestMoment": "<one sentence describing the single best argument made in the debate>",
+  "conclusion": "The conclusion based on the discussion by Aria, Lex, Sage and Rex is that <1-2 sentence synthesis of what the collective arguments across all rounds reveal as the emergent truth or outcome of this debate>.",
+  "evaluations": [
+    {
+      "persona": "Aria",
+      "scores": {
+        "logic": <1-10>,
+        "clarity": <1-10>,
+        "evidence": <1-10>,
+        "engagement": <1-10>
+      },
+      "totalScore": <sum of 4 scores>,
+      "rank": <1-4>,
+      "standoutMove": "<one sentence on their best specific moment>"
+    },
+    {
+      "persona": "Lex",
+      "scores": { "logic": <1-10>, "clarity": <1-10>, "evidence": <1-10>, "engagement": <1-10> },
+      "totalScore": <sum>,
+      "rank": <1-4>,
+      "standoutMove": "<one sentence>"
+    },
+    {
+      "persona": "Sage",
+      "scores": { "logic": <1-10>, "clarity": <1-10>, "evidence": <1-10>, "engagement": <1-10> },
+      "totalScore": <sum>,
+      "rank": <1-4>,
+      "standoutMove": "<one sentence>"
+    },
+    {
+      "persona": "Rex",
+      "scores": { "logic": <1-10>, "clarity": <1-10>, "evidence": <1-10>, "engagement": <1-10> },
+      "totalScore": <sum>,
+      "rank": <1-4>,
+      "standoutMove": "<one sentence>"
+    }
+]
+}
+`;
+
     const transcript = history
       .map((h: any) => `Round ${h.round} - ${h.persona}:\n${h.text}`)
       .join("\n\n");
 
-    const systemPrompt = `
-You are the impartial JUDGE of an AI debate.
-Topic: "${topic}"
+    const systemPrompt = buildJudgePrompt(topic, transcript);
 
-Below is the full transcript of the debate. 
-Evaluate each persona (Aria, Lex, Sage, Rex) based on the following 4 dimensions (score out of 10):
-1. Logic & Reasoning
-2. Clarity of Argument
-3. Use of Evidence
-4. Engagement (did they respond to others' points?)
-
-Then, calculate a total score for each persona, and pick the overall winner.
-Finally, write a 3-4 sentence neutral summary of the overall debate.
-
-Return ONLY a valid JSON object with the following exact structure, without any markdown formatting or extra text:
-{
-  "logic": <winning_score_out_of_10>,
-  "clarity": <winning_score_out_of_10>,
-  "evidence": <winning_score_out_of_10>,
-  "engagement": <winning_score_out_of_10>,
-  "summary": "<your 3-4 sentence summary>",
-  "winner": "<name of the winning persona>"
-}
-
-Transcript:
-${transcript}
-`;
-
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`;
 
     const geminiRes = await fetch(geminiUrl, {
       method: "POST",
@@ -55,7 +110,7 @@ ${transcript}
           }
         ],
         generationConfig: {
-          temperature: 0.2,
+          temperature: 0.3,
           responseMimeType: "application/json"
         }
       })

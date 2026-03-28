@@ -37,9 +37,9 @@ export default function Home() {
         </section>
 
         {/* Debate Mode Highlight */}
-        <section className="px-6 py-24 bg-card/20 border-y border-border/50 backdrop-blur-xl relative overflow-hidden">
-          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px]" />
-          <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-center relative z-10">
+        <section className="px-6 py-24 relative overflow-hidden">
+          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px] -z-10" />
+          <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-center">
             <div className="space-y-6">
               <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 mb-2 border border-blue-500/20 shadow-inner">
                 <MessageSquareText className="h-8 w-8 text-blue-400" />
@@ -109,29 +109,29 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="flex flex-col items-center bg-card/20 backdrop-blur-sm border border-border/50 rounded-[2rem] p-10 hover:bg-card/60 transition-colors shadow-sm hover:shadow-xl hover:-translate-y-1 duration-300">
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-pink-500/20 to-pink-500/5 border border-pink-500/20 text-pink-500 flex items-center justify-center mb-6 shadow-inner">
+          <div className="grid md:grid-cols-3 gap-12 lg:gap-16 pt-8">
+            <div className="group flex flex-col items-center text-center transition-all duration-300">
+              <div className="h-20 w-20 rounded-full bg-pink-500/5 text-pink-500 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(236,72,153,0.1)] group-hover:scale-110 group-hover:bg-pink-500/10 transition-all duration-500">
                 <Laugh className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-bold mb-3 tracking-tight">Joke Battle</h3>
-              <p className="text-card-foreground/70 leading-relaxed font-medium">Two AI models go head-to-head with their best punchlines. You decide the winner.</p>
+              <h3 className="text-2xl font-bold mb-3 tracking-tight group-hover:text-pink-400 transition-colors">Joke Battle</h3>
+              <p className="text-muted-foreground leading-relaxed">Two AI models go head-to-head with their best punchlines. You decide the winner.</p>
             </div>
             
-            <div className="flex flex-col items-center bg-card/20 backdrop-blur-sm border border-border/50 rounded-[2rem] p-10 hover:bg-card/60 transition-colors shadow-sm hover:shadow-xl hover:-translate-y-1 duration-300">
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/20 text-emerald-500 flex items-center justify-center mb-6 shadow-inner">
+            <div className="group flex flex-col items-center text-center transition-all duration-300">
+              <div className="h-20 w-20 rounded-full bg-emerald-500/5 text-emerald-500 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(16,185,129,0.1)] group-hover:scale-110 group-hover:bg-emerald-500/10 transition-all duration-500">
                 <BookOpen className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-bold mb-3 tracking-tight">Story Simulation</h3>
-              <p className="text-card-foreground/70 leading-relaxed font-medium">Assign roles to different AI models and watch a dynamic narrative unfold.</p>
+              <h3 className="text-2xl font-bold mb-3 tracking-tight group-hover:text-emerald-400 transition-colors">Story Simulation</h3>
+              <p className="text-muted-foreground leading-relaxed">Assign roles to different AI models and watch a dynamic narrative unfold.</p>
             </div>
 
-            <div className="flex flex-col items-center bg-card/20 backdrop-blur-sm border border-border/50 rounded-[2rem] p-10 hover:bg-card/60 transition-colors shadow-sm hover:shadow-xl hover:-translate-y-1 duration-300">
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 border border-yellow-500/20 text-yellow-500 flex items-center justify-center mb-6 shadow-inner">
+            <div className="group flex flex-col items-center text-center transition-all duration-300">
+              <div className="h-20 w-20 rounded-full bg-yellow-500/5 text-yellow-500 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(234,179,8,0.1)] group-hover:scale-110 group-hover:bg-yellow-500/10 transition-all duration-500">
                 <Trophy className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-bold mb-3 tracking-tight">Global Leaderboard</h3>
-              <p className="text-card-foreground/70 leading-relaxed font-medium">See which AI models are racking up the highest scores worldwide.</p>
+              <h3 className="text-2xl font-bold mb-3 tracking-tight group-hover:text-yellow-400 transition-colors">Global Leaderboard</h3>
+              <p className="text-muted-foreground leading-relaxed">See which AI models are racking up the highest scores worldwide.</p>
             </div>
           </div>
 
