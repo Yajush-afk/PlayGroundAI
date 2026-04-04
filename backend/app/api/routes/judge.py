@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app.api.dependencies import get_judge_service, throttle_request
+from app.api.dependencies import get_judge_service, get_usage_service, resolve_debate_id, resolve_session_id, throttle_request
 from app.domain.schemas import ErrorResponse, JudgeRequest, JudgeScoresResponse
 from app.providers.base import (
     ProviderAuthError,
@@ -12,6 +12,7 @@ from app.providers.base import (
     ProviderValidationError,
 )
 from app.services.judge_service import JudgeService
+from app.services.usage_service import SessionUsageService, UsagePolicyError
 
 router = APIRouter(prefix="/api", tags=["judge"])
 
@@ -23,10 +24,25 @@ router = APIRouter(prefix="/api", tags=["judge"])
     responses={400: {"model": ErrorResponse}, 401: {"model": ErrorResponse}, 429: {"model": ErrorResponse}, 502: {"model": ErrorResponse}, 504: {"model": ErrorResponse}},
 )
 async def judge_debate(
+    request: Request,
     payload: JudgeRequest,
     _: None = Depends(throttle_request),
     service: JudgeService = Depends(get_judge_service),
+    usage_service: SessionUsageService = Depends(get_usage_service),
 ):
+    debate_id = resolve_debate_id(request)
+    if not debate_id:
+        raise HTTPException(status_code=400, detail="Missing x-playground-debate-id header")
+
+    try:
+        await usage_service.enforce_judge_policy(
+            session_id=resolve_session_id(request),
+            debate_id=debate_id,
+            payload=payload,
+        )
+    except UsagePolicyError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
     try:
         result = await service.judge_debate(payload)
     except ProviderAuthError as exc:

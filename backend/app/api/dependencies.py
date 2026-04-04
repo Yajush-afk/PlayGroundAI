@@ -4,13 +4,14 @@ from functools import lru_cache
 
 from fastapi import HTTPException, Request
 
-from app.core.config import Settings, get_settings
+from app.core.config import get_settings
 from app.middleware.rate_limit import InMemoryRateLimiter
 from app.providers.gemini_client import GeminiClient
 from app.providers.groq_client import GroqClient
 from app.repositories.debates import DebatesRepository
 from app.services.debate_service import DebateService
 from app.services.judge_service import JudgeService
+from app.services.usage_service import SessionUsageService
 
 
 @lru_cache(maxsize=1)
@@ -53,9 +54,22 @@ def get_judge_service() -> JudgeService:
     )
 
 
+@lru_cache(maxsize=1)
+def get_usage_service() -> SessionUsageService:
+    return SessionUsageService(get_settings())
+
+
 async def throttle_request(request: Request) -> None:
     host = request.client.host if request.client else "anonymous"
     key = f"{host}:{request.url.path}"
     allowed = await get_rate_limiter().allow(key)
     if not allowed:
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
+
+def resolve_session_id(request: Request) -> str:
+    return request.headers.get("x-playground-session-id") or (request.client.host if request.client else "anonymous")
+
+
+def resolve_debate_id(request: Request) -> str | None:
+    return request.headers.get("x-playground-debate-id")

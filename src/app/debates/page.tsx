@@ -7,6 +7,7 @@ import { Flame, RotateCcw, Scale } from "lucide-react";
 import { Persona, PERSONA_CONFIG } from "@/components/debates/PersonaCard";
 import { JudgeResults, JudgeScores } from "@/components/debates/JudgeResults";
 import { apiUrl } from "@/lib/api";
+import { getOrCreateSessionId } from "@/lib/session";
 
 type DebateStatus = "setup" | "debating" | "awaiting_judge" | "finished" | "results";
 
@@ -25,6 +26,12 @@ const PRESET_TOPICS: string[] = [
   "Does absolute free speech ultimately harm or protect democracy?",
 ];
 
+const AVAILABLE_ROUND_OPTIONS = [3, 5, 7] as const;
+const MAX_PUBLIC_ROUNDS = Number(process.env.NEXT_PUBLIC_MAX_DEBATE_ROUNDS ?? "3");
+const ROUND_OPTIONS = AVAILABLE_ROUND_OPTIONS.filter((rounds) => rounds <= MAX_PUBLIC_ROUNDS) as Array<3 | 5 | 7>;
+const DEFAULT_ROUNDS = ROUND_OPTIONS[0] ?? 3;
+const LOCKED_ROUNDS_MESSAGE = `I am broke. We only have enough tokens for ${MAX_PUBLIC_ROUNDS} rounds right now.`;
+
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0 },
@@ -32,9 +39,10 @@ const fadeUp = {
 
 export default function DebatesPage() {
   const [topic, setTopic] = useState("");
-  const [targetRounds, setTargetRounds] = useState<3 | 5 | 7>(3);
+  const [targetRounds, setTargetRounds] = useState<3 | 5 | 7>(DEFAULT_ROUNDS);
   const [status, setStatus] = useState<DebateStatus>("setup");
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [currentDebateId, setCurrentDebateId] = useState<string | null>(null);
 
   const [currentRound, setCurrentRound] = useState(1);
   const [viewRound, setViewRound] = useState(1);
@@ -59,31 +67,53 @@ export default function DebatesPage() {
     setJudgeScores(null);
   };
 
+  const createDebateId = () => {
+    if (typeof window === "undefined") {
+      return `debate-${Date.now()}`;
+    }
+
+    return window.crypto.randomUUID();
+  };
+
+  const buildRequestHeaders = (debateId: string) => ({
+    "Content-Type": "application/json",
+    "X-Playground-Session-Id": getOrCreateSessionId(),
+    "X-Playground-Debate-Id": debateId,
+  });
+
   const handleStart = () => {
     if (!topic.trim()) return;
+    const debateId = createDebateId();
     resetForNewRun();
+    setCurrentDebateId(debateId);
     setStatus("debating");
-    startNextTurn(1, 0, []);
+    startNextTurn(1, 0, [], debateId);
   };
 
   const handleRestart = () => {
+    const debateId = createDebateId();
     resetForNewRun();
+    setCurrentDebateId(debateId);
     setStatus("debating");
-    startNextTurn(1, 0, []);
+    startNextTurn(1, 0, [], debateId);
   };
 
   const handleNewDebate = () => {
     setTopic("");
     resetForNewRun();
+    setTargetRounds(DEFAULT_ROUNDS);
+    setCurrentDebateId(null);
     setStatus("setup");
   };
 
   const retryCurrentTurn = () => {
+    const debateId = currentDebateId ?? createDebateId();
+    setCurrentDebateId(debateId);
     setStatus("debating");
-    startNextTurn(currentRound, activePersonaIdx, history);
+    startNextTurn(currentRound, activePersonaIdx, history, debateId);
   };
 
-  const startNextTurn = async (round: number, pIdx: number, currentHistory: ResponseLog[]) => {
+  const startNextTurn = async (round: number, pIdx: number, currentHistory: ResponseLog[], debateId: string) => {
     const persona = PERSONA_ORDER[pIdx];
     setStreamingText("");
     setHasTurnError(false);
@@ -107,7 +137,7 @@ export default function DebatesPage() {
       const nextIdx = pIdx + 1;
       if (nextIdx < PERSONA_ORDER.length) {
         setActivePersonaIdx(nextIdx);
-        startNextTurn(round, nextIdx, newHistory);
+        startNextTurn(round, nextIdx, newHistory, debateId);
         return;
       }
 
@@ -116,7 +146,7 @@ export default function DebatesPage() {
         setCurrentRound(nextRound);
         setViewRound(nextRound);
         setActivePersonaIdx(0);
-        startNextTurn(nextRound, 0, newHistory);
+        startNextTurn(nextRound, 0, newHistory, debateId);
         return;
       }
 
@@ -127,7 +157,7 @@ export default function DebatesPage() {
     try {
       let res = await fetch(apiUrl("/api/debate"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: buildRequestHeaders(debateId),
         body: JSON.stringify({
           topic,
           persona,
@@ -144,7 +174,7 @@ export default function DebatesPage() {
         await sleep(BACKOFF_MS[attempt]);
         res = await fetch(apiUrl("/api/debate"), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: buildRequestHeaders(debateId),
           body: JSON.stringify({
             topic,
             persona,
@@ -201,7 +231,7 @@ export default function DebatesPage() {
       const nextIdx = pIdx + 1;
       if (nextIdx < PERSONA_ORDER.length) {
         setActivePersonaIdx(nextIdx);
-        startNextTurn(round, nextIdx, newHistory);
+        startNextTurn(round, nextIdx, newHistory, debateId);
         return;
       }
 
@@ -210,7 +240,7 @@ export default function DebatesPage() {
         setCurrentRound(nextRound);
         setViewRound(nextRound);
         setActivePersonaIdx(0);
-        startNextTurn(nextRound, 0, newHistory);
+        startNextTurn(nextRound, 0, newHistory, debateId);
         return;
       }
 
@@ -276,7 +306,7 @@ export default function DebatesPage() {
     try {
       const res = await fetch(apiUrl("/api/judge"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: buildRequestHeaders(currentDebateId ?? createDebateId()),
         body: JSON.stringify({ topic, history: fullHistory, totalRounds: targetRounds }),
       });
 
@@ -343,19 +373,38 @@ export default function DebatesPage() {
             <div className="space-y-1.5">
               <label className="font-mono text-[0.58rem] uppercase tracking-[0.2em] text-muted-foreground">Rounds per side</label>
               <div className="grid grid-cols-3 gap-2">
-                {[3, 5, 7].map((rounds) => (
-                  <button
-                    key={rounds}
-                    onClick={() => setTargetRounds(rounds as 3 | 5 | 7)}
-                    className={`rounded-xl border py-2.5 font-mono text-xs tracking-[0.16em] transition-all ${
-                      targetRounds === rounds
-                        ? "border-violet-500/50 bg-violet-500/15 text-foreground"
-                        : "border-white/8 bg-white/[0.025] text-muted-foreground hover:text-foreground hover:border-white/14"
-                    }`}
-                  >
-                    {rounds}
-                  </button>
-                ))}
+                {AVAILABLE_ROUND_OPTIONS.map((rounds) => {
+                  const isLocked = rounds > MAX_PUBLIC_ROUNDS;
+
+                  return (
+                    <div key={rounds} className="group relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!isLocked) {
+                            setTargetRounds(rounds as 3 | 5 | 7);
+                          }
+                        }}
+                        aria-disabled={isLocked}
+                        className={`w-full rounded-xl border py-2.5 font-mono text-xs tracking-[0.16em] transition-all ${
+                          isLocked
+                            ? "cursor-not-allowed border-white/6 bg-white/[0.02] text-muted-foreground/45"
+                            : targetRounds === rounds
+                              ? "border-violet-500/50 bg-violet-500/15 text-foreground"
+                              : "border-white/8 bg-white/[0.025] text-muted-foreground hover:text-foreground hover:border-white/14"
+                        }`}
+                      >
+                        {rounds}
+                      </button>
+
+                      {isLocked ? (
+                        <div className="pointer-events-none absolute left-1/2 top-[calc(100%+0.5rem)] z-20 w-44 -translate-x-1/2 rounded-lg border border-white/10 bg-card/95 px-3 py-2 text-center text-[0.65rem] leading-5 text-muted-foreground opacity-0 shadow-[0_12px_32px_rgba(0,0,0,0.45)] transition-opacity duration-200 group-hover:opacity-100">
+                          {LOCKED_ROUNDS_MESSAGE}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

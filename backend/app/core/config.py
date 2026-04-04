@@ -15,6 +15,7 @@ class Settings(BaseSettings):
         env_file=(BACKEND_DIR / ".env", ROOT_DIR / ".env.local"),
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
     app_name: str = "PlayGroundAI FastAPI Backend"
@@ -39,6 +40,13 @@ class Settings(BaseSettings):
     judge_timeout_seconds: float = Field(default=45.0, validation_alias="JUDGE_TIMEOUT_SECONDS")
     rate_limit_window_seconds: int = Field(default=60, validation_alias="RATE_LIMIT_WINDOW_SECONDS")
     rate_limit_max_requests: int = Field(default=20, validation_alias="RATE_LIMIT_MAX_REQUESTS")
+    anonymous_max_rounds: int = Field(default=3, validation_alias="ANONYMOUS_MAX_ROUNDS")
+    anonymous_debate_window_seconds: int = Field(default=1800, validation_alias="ANONYMOUS_DEBATE_WINDOW_SECONDS")
+    anonymous_debates_per_window: int = Field(default=2, validation_alias="ANONYMOUS_DEBATES_PER_WINDOW")
+    anonymous_debates_per_day: int = Field(default=5, validation_alias="ANONYMOUS_DEBATES_PER_DAY")
+    anonymous_judges_per_day: int = Field(default=5, validation_alias="ANONYMOUS_JUDGES_PER_DAY")
+    anonymous_max_active_debates: int = Field(default=1, validation_alias="ANONYMOUS_MAX_ACTIVE_DEBATES")
+    active_debate_ttl_seconds: int = Field(default=3600, validation_alias="ACTIVE_DEBATE_TTL_SECONDS")
 
     @property
     def allowed_origins(self) -> list[str]:
