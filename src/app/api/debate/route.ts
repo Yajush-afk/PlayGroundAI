@@ -132,8 +132,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     console.error("Error in debate route:", error);
-    return new Response(error.message, { status: 500 });
+    return new Response(message, { status: 500 });
   }
 }

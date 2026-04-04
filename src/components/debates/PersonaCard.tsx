@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -41,7 +42,7 @@ export function PersonaCard({ name, status, text, onRetry, isActiveTurn }: Perso
             config.animation
           )}
         >
-          <img src={config.avatar} alt={name} className="h-full w-full object-cover" />
+          <Image src={config.avatar} alt={name} width={48} height={48} className="h-full w-full object-cover" />
         </div>
         <div>
           <h3 className={cn("font-semibold leading-none", config.color)}>

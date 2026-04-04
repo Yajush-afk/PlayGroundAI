@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
-import { Trophy, ChevronLeft, ChevronRight, Menu } from "lucide-react";
+import { useMemo, useState } from "react";
+import Image from "next/image";
+import { ChevronLeft, ChevronRight, Menu, Scale } from "lucide-react";
 import { Persona, PERSONA_CONFIG } from "./PersonaCard";
 
 export interface Evaluation {
@@ -29,18 +30,17 @@ interface JudgeResultsProps {
   onRetry?: () => void;
 }
 
-function ScoreBar({ label, score, colorClass }: { label: string; score: number, colorClass: string }) {
+function ScoreBar({ label, score, colorClass }: { label: string; score: number; colorClass: string }) {
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs sm:text-sm">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-bold text-foreground">{score}/10</span>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-4">
+        <span className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground">
+          {label}
+        </span>
+        <span className="font-display text-2xl text-foreground">{score}</span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary shadow-inner">
-        <div
-          className={`h-full transition-all duration-1000 ease-out ${colorClass}`}
-          style={{ width: `${(score / 10) * 100}%` }}
-        />
+      <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+        <div className={`h-full rounded-full transition-all duration-700 ${colorClass}`} style={{ width: `${score * 10}%` }} />
       </div>
     </div>
   );
@@ -59,21 +59,41 @@ export function JudgeResults({ scores, status, onRetry }: JudgeResultsProps) {
 
   if (status === "evaluating") {
     return (
-      <div className="w-full flex flex-col items-center justify-center p-12 bg-card/40 backdrop-blur-xl border border-white/5 rounded-3xl shadow-2xl h-full">
-        <div className="h-24 w-24 rounded-full bg-yellow-500/10 shadow-[0_0_40px_rgba(234,179,8,0.2)] animate-pulse flex items-center justify-center mb-6 overflow-hidden border border-yellow-500/20">
-          <img src="/avatars/judge.png" alt="Judge" className="h-full w-full object-cover" />
+      <div className="flex min-h-[520px] items-center justify-center rounded-[1.7rem] border border-[#d6a85a]/22 bg-[radial-gradient(circle_at_top,rgba(214,168,90,0.14),transparent_48%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.12))] px-6 py-10">
+        <div className="flex max-w-xl flex-col items-center text-center">
+          <div className="h-24 w-24 overflow-hidden rounded-full border border-[#d6a85a]/30 shadow-[0_0_36px_rgba(214,168,90,0.14)]">
+            <Image src="/avatars/judge.png" alt="Justice Nyay" width={96} height={96} className="h-full w-full object-cover" />
+          </div>
+          <p className="mt-8 font-mono text-[0.62rem] uppercase tracking-[0.28em] text-[#e0bf73]">
+            Justice Nyay Deliberating
+          </p>
+          <h3 className="mt-3 font-display text-5xl leading-none text-foreground">Scoring the full transcript</h3>
+          <p className="mt-4 text-sm leading-7 text-muted-foreground sm:text-base">
+            The judge is balancing logic, clarity, evidence, and engagement across every round before issuing a final verdict.
+          </p>
         </div>
-        <h3 className="text-xl font-bold bg-gradient-to-r from-yellow-500 to-amber-300 bg-clip-text text-transparent mb-2">Analyzing the Debate...</h3>
-        <p className="text-sm text-muted-foreground animate-pulse">Deliberating arguments across all dimensions.</p>
       </div>
     );
   }
 
   if (status === "error") {
     return (
-      <div className="w-full flex items-center justify-center gap-4 p-8 bg-destructive/5 border border-destructive/20 rounded-3xl shadow-sm text-center h-full">
-        <p className="text-destructive font-semibold">Justice Nyay encountered an error calculating scores.</p>
-        <button onClick={onRetry} className="bg-destructive/10 text-destructive px-4 py-2 rounded-full hover:bg-destructive/20 font-bold transition-colors">Retry</button>
+      <div className="flex min-h-[420px] items-center justify-center rounded-[1.7rem] border border-destructive/25 bg-destructive/10 px-6 py-10">
+        <div className="max-w-xl text-center">
+          <p className="font-mono text-[0.62rem] uppercase tracking-[0.28em] text-destructive/85">
+            Judgment Interrupted
+          </p>
+          <h3 className="mt-3 font-display text-5xl leading-none text-destructive">The judge lost the thread.</h3>
+          <p className="mt-4 text-sm leading-7 text-destructive/85 sm:text-base">
+            The debate transcript is still intact. Retry the scoring pass and PlayGroundAI will send the same transcript back through the judge.
+          </p>
+          <button
+            onClick={onRetry}
+            className="mt-6 rounded-full border border-destructive/40 bg-destructive px-5 py-3 font-mono text-[0.66rem] uppercase tracking-[0.22em] text-destructive-foreground transition-colors hover:bg-destructive/90"
+          >
+            Retry Judgment
+          </button>
+        </div>
       </div>
     );
   }
@@ -82,158 +102,186 @@ export function JudgeResults({ scores, status, onRetry }: JudgeResultsProps) {
     if (sortedEvals.length === 0) return null;
 
     const currentEval = sortedEvals[activeIndex];
-    const personaConfig = PERSONA_CONFIG[currentEval.persona as Persona];
+    const personaConfig = PERSONA_CONFIG[currentEval.persona];
     const winnerConfig = PERSONA_CONFIG[scores.winner as Persona];
-    
-    const getBgColor = (p: Persona) => {
-      switch(p) {
-        case "Aria": return "bg-purple-500";
-        case "Lex": return "bg-blue-500";
-        case "Sage": return "bg-green-500";
-        case "Rex": return "bg-red-500";
-        default: return "bg-primary";
+
+    const getBgColor = (persona: Persona) => {
+      switch (persona) {
+        case "Aria":
+          return "bg-[#b67de6]";
+        case "Lex":
+          return "bg-[#72b7ee]";
+        case "Sage":
+          return "bg-[#7ed39e]";
+        case "Rex":
+          return "bg-[#ef9177]";
+        default:
+          return "bg-accent";
       }
     };
 
     return (
-      <div className="w-full h-full flex flex-col md:flex-row gap-6 p-6 sm:p-8 bg-card/40 backdrop-blur-xl border border-white/5 rounded-3xl shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-700">
-        {/* Left absolute gradient glow based on winner */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500 via-amber-300 to-yellow-500" />
-        
-        {/* Left Sidebar: Justice Nyay */}
-        <div className="flex flex-col items-center justify-start shrink-0 pt-4 md:border-r border-border/50 md:pr-8">
-          <div className="relative flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-full bg-yellow-500/10 shadow-[0_0_40px_rgba(234,179,8,0.2)] ring-2 ring-yellow-500/40 outline-none overflow-hidden mb-4">
-            <img src="/avatars/judge.png" alt="Judge" className="h-full w-full object-cover" />
-          </div>
-          <h4 className="font-bold text-lg text-yellow-500 tracking-tight leading-none text-center">Justice Nyay</h4>
-          <p className="text-[10px] text-yellow-600/80 uppercase tracking-widest mt-1.5 font-bold">Judge</p>
-        </div>
-
-        {/* Middle: Debate Summary */}
-        <div className="flex-1 flex flex-col pt-4 min-w-[300px]">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="p-2 bg-yellow-500/10 rounded-lg">
-              <Trophy className="h-5 w-5 text-yellow-500" />
-            </div>
-            <h2 className="text-2xl font-black text-foreground">Final Verdict</h2>
-          </div>
-          {/* Verdict Box (expands to fill vertical gap) */}
-          <div className="flex-1 min-h-0 bg-background/30 rounded-xl border border-border/50 shadow-inner p-4 mb-4 overflow-y-auto">
-            <p className="text-foreground/80 leading-relaxed text-[13px] font-medium">
-              {scores.summary}
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {/* Strongest Moment */}
-            <div className="pb-4 border-b border-border/50">
-               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                 <Trophy className="h-3 w-3 text-yellow-500" />
-                 Strongest Moment
-               </p>
-               <p className="text-[12px] italic text-foreground/70 font-medium line-clamp-2">
-                 "{scores.strongestMoment}"
-               </p>
-            </div>
-
-            {/* Conclusion Box */}
-            <div className="pb-4 border-b border-border/50">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                <span className="inline-flex items-center justify-center h-3 w-3 rounded-full bg-amber-500/20 text-amber-500 text-[8px] font-black">✦</span>
-                Conclusion
+      <div className="grid min-h-[620px] gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <section className="rounded-[1.7rem] border border-[#d6a85a]/18 bg-[radial-gradient(circle_at_top,rgba(214,168,90,0.12),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.14))] p-6 sm:p-7">
+          <div className="flex items-start justify-between gap-4 border-b border-white/6 pb-6">
+            <div>
+              <p className="font-mono text-[0.62rem] uppercase tracking-[0.28em] text-[#e0bf73]">
+                Final Verdict
               </p>
-              <div className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 via-background/40 to-background/20 p-3 shadow-inner">
-                <p className="text-[12.5px] text-foreground/90 font-medium leading-snug">
-                  {scores.conclusion}
+              <h2 className="mt-3 font-display text-5xl leading-none text-foreground">Justice Nyay speaks</h2>
+            </div>
+            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#d6a85a]/30 bg-[#d6a85a]/10 text-[#f0ca79]">
+              <Scale className="h-5 w-5" />
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-5">
+            <div className="rounded-[1.5rem] border border-white/8 bg-black/18 p-5 shadow-soft">
+              <p className="text-sm leading-7 text-foreground/84 sm:text-base">{scores.summary}</p>
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-2">
+              <div className="rounded-[1.4rem] border border-border/60 bg-black/18 p-5">
+                <p className="font-mono text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
+                  Strongest Moment
                 </p>
+                <p className="mt-3 font-display text-3xl text-foreground">A decisive turn</p>
+                <p className="mt-3 text-sm leading-7 text-foreground/76">{scores.strongestMoment}</p>
+              </div>
+              <div className="rounded-[1.4rem] border border-border/60 bg-black/18 p-5">
+                <p className="font-mono text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
+                  Conclusion
+                </p>
+                <p className="mt-3 font-display text-3xl text-foreground">Emergent truth</p>
+                <p className="mt-3 text-sm leading-7 text-foreground/76">{scores.conclusion}</p>
               </div>
             </div>
 
-            {/* Overall Winner (anchored to bottom) */}
-            <div className="pt-1">
-             <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Overall Winner</p>
-             <div className="flex items-center gap-4">
-               <div className={`h-14 w-14 shrink-0 rounded-full overflow-hidden shadow-inner ring-2 ring-white/10 ${winnerConfig?.bgLight || ''}`}>
-                 {winnerConfig && <img src={winnerConfig.avatar} alt={scores.winner} className="h-full w-full object-cover" />}
-               </div>
-               <p className={`text-3xl sm:text-4xl font-black ${winnerConfig?.color || 'text-yellow-500'} inline-block drop-shadow-md`}>{scores.winner}</p>
-             </div>
+            <div className="rounded-[1.5rem] border border-accent/24 bg-accent/10 p-5 shadow-soft">
+              <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-accent">Overall Winner</p>
+              <div className="mt-4 flex items-center gap-4">
+                <div className={`h-16 w-16 overflow-hidden rounded-full border border-white/10 ${winnerConfig?.bgLight ?? ""}`}>
+                  {winnerConfig ? (
+                    <Image src={winnerConfig.avatar} alt={scores.winner} width={64} height={64} className="h-full w-full object-cover" />
+                  ) : null}
+                </div>
+                <div>
+                  <p className={`font-display text-5xl leading-none ${winnerConfig?.color ?? "text-foreground"}`}>
+                    {scores.winner}
+                  </p>
+                  <p className="mt-2 font-mono text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
+                    Highest composite score
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Right: Participant Score Carousel */}
-        <div className="w-full md:w-[320px] shrink-0 bg-background/50 rounded-2xl border border-white/5 p-6 flex flex-col relative h-full min-h-[380px] shadow-[inset_0_0_20px_rgba(0,0,0,0.2)]">
-          {/* Header of card */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className={`h-14 w-14 shrink-0 rounded-full overflow-hidden shadow-inner ring-2 ring-white/10 ${personaConfig?.bgLight || ''}`}>
-              {personaConfig ? <img src={personaConfig.avatar} alt={currentEval.persona} className="h-full w-full object-cover" /> : null}
-            </div>
+        <section className="rounded-[1.7rem] border border-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.14))] p-6 sm:p-7">
+          <div className="flex items-start justify-between gap-4 border-b border-white/6 pb-6">
             <div>
-              <h3 className={`font-bold text-xl leading-tight ${personaConfig?.color || 'text-foreground'}`}>{currentEval.persona}</h3>
-              <p className="text-xs text-muted-foreground font-semibold mt-0.5">
-                Rank: {currentEval.rank === 1 ? <span className="text-yellow-500 font-bold">🏆 #1 Winner</span> : `#${currentEval.rank}`}
+              <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-muted-foreground">
+                Score Carousel
               </p>
+              <h3 className={`mt-3 font-display text-5xl leading-none ${personaConfig.color}`}>{currentEval.persona}</h3>
+            </div>
+            <div className={`h-16 w-16 overflow-hidden rounded-full border border-white/10 ${personaConfig.bgLight}`}>
+              <Image src={personaConfig.avatar} alt={currentEval.persona} width={64} height={64} className="h-full w-full object-cover" />
             </div>
           </div>
 
-          {/* Scores */}
-          <div className="space-y-6 flex-1">
-            <ScoreBar label="Logic & Reasoning" score={currentEval.scores.logic} colorClass={getBgColor(currentEval.persona)} />
-            <ScoreBar label="Clarity of Argument" score={currentEval.scores.clarity} colorClass={getBgColor(currentEval.persona)} />
-            <ScoreBar label="Use of Evidence" score={currentEval.scores.evidence} colorClass={getBgColor(currentEval.persona)} />
-            <ScoreBar label="Engagement" score={currentEval.scores.engagement} colorClass={getBgColor(currentEval.persona)} />
+          <div className="mt-6 space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-[1.2rem] border border-border/60 bg-black/18 p-4">
+                <p className="font-mono text-[0.58rem] uppercase tracking-[0.18em] text-muted-foreground">Rank</p>
+                <p className="mt-2 font-display text-4xl text-foreground">#{currentEval.rank}</p>
+              </div>
+              <div className="rounded-[1.2rem] border border-border/60 bg-black/18 p-4">
+                <p className="font-mono text-[0.58rem] uppercase tracking-[0.18em] text-muted-foreground">Total</p>
+                <p className="mt-2 font-display text-4xl text-foreground">{currentEval.totalScore}/40</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 rounded-[1.4rem] border border-border/60 bg-black/18 p-5">
+              <ScoreBar label="Logic" score={currentEval.scores.logic} colorClass={getBgColor(currentEval.persona)} />
+              <ScoreBar label="Clarity" score={currentEval.scores.clarity} colorClass={getBgColor(currentEval.persona)} />
+              <ScoreBar label="Evidence" score={currentEval.scores.evidence} colorClass={getBgColor(currentEval.persona)} />
+              <ScoreBar label="Engagement" score={currentEval.scores.engagement} colorClass={getBgColor(currentEval.persona)} />
+            </div>
+
+            <div className="rounded-[1.4rem] border border-border/60 bg-black/18 p-5">
+              <p className="font-mono text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
+                Standout Move
+              </p>
+              <p className="mt-3 text-sm leading-7 text-foreground/78">{currentEval.standoutMove}</p>
+            </div>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center justify-between mt-8 pt-4 border-t border-border/50">
-            <div className="flex gap-1.5">
-              <button 
-                onClick={() => setActiveIndex(prev => (prev === 0 ? sortedEvals.length - 1 : prev - 1))}
-                className="p-1.5 rounded-lg hover:bg-secondary/80 text-foreground transition-colors border border-border/50"
+          <div className="mt-6 flex items-center justify-between gap-4 border-t border-white/6 pt-6">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveIndex((prev) => (prev === 0 ? sortedEvals.length - 1 : prev - 1))}
+                className="rounded-full border border-border/70 bg-white/[0.03] p-2 text-muted-foreground transition-colors hover:text-foreground"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <button 
-                onClick={() => setActiveIndex(prev => (prev === sortedEvals.length - 1 ? 0 : prev + 1))}
-                className="p-1.5 rounded-lg hover:bg-secondary/80 text-foreground transition-colors border border-border/50"
+              <button
+                onClick={() => setActiveIndex((prev) => (prev === sortedEvals.length - 1 ? 0 : prev + 1))}
+                className="rounded-full border border-border/70 bg-white/[0.03] p-2 text-muted-foreground transition-colors hover:text-foreground"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
-            <div className="flex gap-1.5 px-3 py-1.5 bg-background/80 rounded-full border border-border/50">
-              {sortedEvals.map((_, i) => (
-                <div key={i} className={`h-1.5 w-1.5 rounded-full transition-colors ${i === activeIndex ? "bg-primary" : "bg-muted"}`} />
+
+            <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-black/18 px-3 py-2">
+              {sortedEvals.map((_, index) => (
+                <span
+                  key={index}
+                  className={`h-1.5 w-1.5 rounded-full ${index === activeIndex ? "bg-accent" : "bg-white/16"}`}
+                />
               ))}
             </div>
+
             <div className="relative">
-              <button 
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-1.5 rounded-lg hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
+              <button
+                onClick={() => setIsMenuOpen((open) => !open)}
+                className="rounded-full border border-border/70 bg-white/[0.03] p-2 text-muted-foreground transition-colors hover:text-foreground"
               >
                 <Menu className="h-4 w-4" />
               </button>
-              
-              {isMenuOpen && (
-                <div className="absolute bottom-[120%] right-0 mb-1 w-44 bg-card/95 backdrop-blur-md border border-white/10 shadow-2xl rounded-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
-                  {sortedEvals.map((ev, i) => {
-                    const c = PERSONA_CONFIG[ev.persona];
+
+              {isMenuOpen ? (
+                <div className="absolute bottom-[calc(100%+0.75rem)] right-0 w-52 overflow-hidden rounded-[1.2rem] border border-border/60 bg-card/95 shadow-panel backdrop-blur-xl">
+                  {sortedEvals.map((evaluation, index) => {
+                    const config = PERSONA_CONFIG[evaluation.persona];
+
                     return (
                       <button
-                        key={ev.persona}
-                        onClick={() => { setActiveIndex(i); setIsMenuOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/80 transition-colors ${i === activeIndex ? "bg-secondary/50 text-foreground" : "text-muted-foreground"}`}
+                        key={evaluation.persona}
+                        onClick={() => {
+                          setActiveIndex(index);
+                          setIsMenuOpen(false);
+                        }}
+                        className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
+                          index === activeIndex ? "bg-white/[0.05] text-foreground" : "text-muted-foreground hover:bg-white/[0.03] hover:text-foreground"
+                        }`}
                       >
-                        <img src={c.avatar} className="h-6 w-6 rounded-full object-cover border border-white/10" />
-                        <span className="text-sm font-bold">{ev.persona}</span>
+                        <Image src={config.avatar} alt={evaluation.persona} width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
+                        <div>
+                          <p className="font-display text-2xl leading-none text-inherit">{evaluation.persona}</p>
+                          <p className="mt-1 font-mono text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+                            Rank #{evaluation.rank}
+                          </p>
+                        </div>
                       </button>
-                    )
+                    );
                   })}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
-        </div>
+        </section>
       </div>
     );
   }

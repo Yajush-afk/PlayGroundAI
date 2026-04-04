@@ -1,13 +1,33 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import {
+  Cormorant_Garamond,
+  IBM_Plex_Mono,
+  IBM_Plex_Sans,
+} from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 
-const inter = Inter({ subsets: ["latin"] });
+const display = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-display",
+});
+
+const body = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-body",
+});
+
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
-  title: "PlaygroundAI",
-  description: "AI models debate and interact with diverse personalities.",
+  title: "PlayGroundAI",
+  description: "A live AI reasoning arena where personas debate and a neutral judge decides the verdict.",
 };
 
 export default function RootLayout({
@@ -17,9 +37,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" style={{ colorScheme: "dark" }}>
-      <body className={`${inter.className} min-h-screen bg-background antialiased pt-16`}>
+      <body
+        className={`${display.variable} ${body.variable} ${mono.variable} min-h-screen bg-background font-body text-foreground antialiased`}
+      >
+        <div className="site-shell">
+          <div className="site-shell__glow site-shell__glow--left" />
+          <div className="site-shell__glow site-shell__glow--right" />
+          <div className="site-shell__mesh" />
+          <div className="site-shell__grain" />
+        </div>
         <Navbar />
-        {children}
+        <div className="relative pt-20">{children}</div>
       </body>
     </html>
   );

@@ -3,9 +3,19 @@ import { supabase } from "@/lib/supabase";
 
 export const runtime = "edge";
 
+interface DebateHistoryEntry {
+  round: number;
+  persona: string;
+  text: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { topic, history, totalRounds } = await req.json();
+    const { topic, history, totalRounds } = (await req.json()) as {
+      topic?: string;
+      history?: DebateHistoryEntry[];
+      totalRounds?: number;
+    };
 
     if (!topic || !history) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -93,7 +103,7 @@ Return ONLY a valid JSON object. No markdown, no explanation, no text outside th
 `;
 
     const transcript = history
-      .map((h: any) => `Round ${h.round} - ${h.persona}:\n${h.text}`)
+      .map((h) => `Round ${h.round} - ${h.persona}:\n${h.text}`)
       .join("\n\n");
 
     const systemPrompt = buildJudgePrompt(topic, transcript);
@@ -151,8 +161,9 @@ Return ONLY a valid JSON object. No markdown, no explanation, no text outside th
 
     return NextResponse.json(result);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     console.error("Error in judge route:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
