@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PlayGroundAI
 
-## Getting Started
+PlayGroundAI is a Next.js frontend with a FastAPI backend for running multi-persona AI debates and judging them with a separate model.
 
-First, run the development server:
+## Architecture
+
+- Frontend: Next.js App Router
+- Backend: FastAPI
+- Debate generation: Groq streaming chat completions
+- Judging: Gemini 2.5 Flash
+- Persistence: Supabase (optional)
+
+## Frontend Environment
+
+Your existing `.env.local` can stay in the repo root. For the FastAPI cutover, add:
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
+```
+
+Current frontend keys already used by the backend config fallback:
+
+```bash
+GROQ_API_KEY=
+GOOGLE_AI_API_KEY=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
+
+## Backend Environment
+
+FastAPI reads from either:
+
+- `backend/.env`
+- root `.env.local`
+
+Recommended secure backend env names are:
+
+```bash
+GROQ_API_KEY=
+GOOGLE_AI_API_KEY=
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+REQUEST_TIMEOUT_SECONDS=30
+STREAM_TIMEOUT_SECONDS=90
+JUDGE_TIMEOUT_SECONDS=45
+RATE_LIMIT_WINDOW_SECONDS=60
+RATE_LIMIT_MAX_REQUESTS=20
+```
+
+For demo-only usage, the backend will fall back to:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+but server-only Supabase credentials are strongly preferred.
+
+## Running The Demo
+
+### 1. Frontend
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Backend
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Use the requested conda environment:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+conda activate playground
+uvicorn app.main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
+```
 
-## Learn More
+### 3. Tests
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+conda run -n playground pytest backend/tests
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Backend Files
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `backend/app/main.py`
+- `backend/app/api/routes/debate.py`
+- `backend/app/api/routes/judge.py`
+- `backend/app/domain/`
+- `backend/app/providers/`
+- `backend/app/services/`
+- `backend/app/repositories/`
 
-## Deploy on Vercel
+## Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- The frontend still preserves the existing debate/judge API contract.
+- The hardest compatibility point is streaming SSE from `/api/debate`.
+- Supabase persistence is optional; the app works without it.

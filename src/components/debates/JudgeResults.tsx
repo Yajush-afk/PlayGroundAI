@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronLeft, ChevronRight, Menu, Scale } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu } from "lucide-react";
 import { Persona, PERSONA_CONFIG } from "./PersonaCard";
 
 export interface Evaluation {

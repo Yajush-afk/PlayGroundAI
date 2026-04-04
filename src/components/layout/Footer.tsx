@@ -7,16 +7,6 @@ export function Footer() {
   const ref = useRef<HTMLElement>(null);
   const isInView = useInView(ref, { once: true, margin: "0px 0px -20px 0px" });
 
-  const items = [
-    { label: "© 2026 PlayGroundAI. All rights reserved.", isLink: false },
-    {
-      label: "Made by",
-      linkText: "Yajush Srivastava",
-      href: "https://x.com/yajush_who",
-      isLink: true,
-    },
-  ];
-
   return (
     <motion.footer
       ref={ref}

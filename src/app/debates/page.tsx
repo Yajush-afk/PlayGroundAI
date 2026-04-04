@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
-import { Flame, RotateCcw, Scale, Sparkles, SquareTerminal, Trophy } from "lucide-react";
+import { Flame, RotateCcw, Scale } from "lucide-react";
 import { Persona, PERSONA_CONFIG } from "@/components/debates/PersonaCard";
 import { JudgeResults, JudgeScores } from "@/components/debates/JudgeResults";
+import { apiUrl } from "@/lib/api";
 
 type DebateStatus = "setup" | "debating" | "awaiting_judge" | "finished" | "results";
 
@@ -124,7 +125,7 @@ export default function DebatesPage() {
     }
 
     try {
-      let res = await fetch("/api/debate", {
+      let res = await fetch(apiUrl("/api/debate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -141,7 +142,7 @@ export default function DebatesPage() {
 
       for (let attempt = 0; attempt < MAX_RETRIES && res.status === 429; attempt++) {
         await sleep(BACKOFF_MS[attempt]);
-        res = await fetch("/api/debate", {
+        res = await fetch(apiUrl("/api/debate"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -273,7 +274,7 @@ export default function DebatesPage() {
     }
 
     try {
-      const res = await fetch("/api/judge", {
+      const res = await fetch(apiUrl("/api/judge"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic, history: fullHistory, totalRounds: targetRounds }),
