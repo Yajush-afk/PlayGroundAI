@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
-import { ArrowRight, Flame, Scale, Sparkles, SquareTerminal, Trophy, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { Flame, RotateCcw, Scale, Sparkles, SquareTerminal, Trophy } from "lucide-react";
 import { Persona, PERSONA_CONFIG } from "@/components/debates/PersonaCard";
 import { JudgeResults, JudgeScores } from "@/components/debates/JudgeResults";
 
@@ -23,18 +24,15 @@ const PRESET_TOPICS: string[] = [
   "Does absolute free speech ultimately harm or protect democracy?",
 ];
 
-const PERSONA_SURFACE: Record<Persona, string> = {
-  Aria: "border-[#b67de6]/35 bg-[linear-gradient(180deg,rgba(182,125,230,0.14),rgba(12,10,10,0.16))]",
-  Lex: "border-[#72b7ee]/35 bg-[linear-gradient(180deg,rgba(114,183,238,0.14),rgba(12,10,10,0.16))]",
-  Sage: "border-[#7ed39e]/35 bg-[linear-gradient(180deg,rgba(126,211,158,0.14),rgba(12,10,10,0.16))]",
-  Rex: "border-[#ef9177]/35 bg-[linear-gradient(180deg,rgba(239,145,119,0.14),rgba(12,10,10,0.16))]",
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 },
 };
 
 export default function DebatesPage() {
   const [topic, setTopic] = useState("");
   const [targetRounds, setTargetRounds] = useState<3 | 5 | 7>(3);
   const [status, setStatus] = useState<DebateStatus>("setup");
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
   const [currentRound, setCurrentRound] = useState(1);
@@ -47,19 +45,9 @@ export default function DebatesPage() {
   const [judgeStatus, setJudgeStatus] = useState<"idle" | "evaluating" | "done" | "error">("idle");
   const [judgeScores, setJudgeScores] = useState<JudgeScores | null>(null);
 
-  const arenaRef = useRef<HTMLDivElement>(null);
   const activePersonaName = PERSONA_ORDER[activePersonaIdx];
 
-  useEffect(() => {
-    if (status !== "setup") {
-      arenaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [status]);
-
-  const handleStart = () => {
-    if (!topic.trim()) return;
-
-    setStatus("debating");
+  const resetForNewRun = () => {
     setCurrentRound(1);
     setViewRound(1);
     setActivePersonaIdx(0);
@@ -68,36 +56,25 @@ export default function DebatesPage() {
     setHasTurnError(false);
     setJudgeStatus("idle");
     setJudgeScores(null);
+  };
 
+  const handleStart = () => {
+    if (!topic.trim()) return;
+    resetForNewRun();
+    setStatus("debating");
     startNextTurn(1, 0, []);
   };
 
   const handleRestart = () => {
+    resetForNewRun();
     setStatus("debating");
-    setCurrentRound(1);
-    setViewRound(1);
-    setActivePersonaIdx(0);
-    setHistory([]);
-    setStreamingText("");
-    setHasTurnError(false);
-    setJudgeStatus("idle");
-    setJudgeScores(null);
-
     startNextTurn(1, 0, []);
   };
 
   const handleNewDebate = () => {
     setTopic("");
+    resetForNewRun();
     setStatus("setup");
-    setIsModalOpen(false);
-    setCurrentRound(1);
-    setViewRound(1);
-    setActivePersonaIdx(0);
-    setHistory([]);
-    setStreamingText("");
-    setHasTurnError(false);
-    setJudgeStatus("idle");
-    setJudgeScores(null);
   };
 
   const retryCurrentTurn = () => {
@@ -122,10 +99,9 @@ export default function DebatesPage() {
         await sleep(20);
       }
 
-      setStreamingText(demoResponse);
-
       const newHistory = [...currentHistory, { persona, text: demoResponse, round }];
       setHistory(newHistory);
+      setStreamingText("");
 
       const nextIdx = pIdx + 1;
       if (nextIdx < PERSONA_ORDER.length) {
@@ -144,7 +120,6 @@ export default function DebatesPage() {
       }
 
       setStatus("awaiting_judge");
-      setStreamingText("");
       return;
     }
 
@@ -165,8 +140,7 @@ export default function DebatesPage() {
       const BACKOFF_MS = [12000, 20000, 30000];
 
       for (let attempt = 0; attempt < MAX_RETRIES && res.status === 429; attempt++) {
-        const waitMs = BACKOFF_MS[attempt];
-        await sleep(waitMs);
+        await sleep(BACKOFF_MS[attempt]);
         res = await fetch("/api/debate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -181,8 +155,7 @@ export default function DebatesPage() {
       }
 
       if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Failed to fetch debate stream: ${errorText}`);
+        throw new Error(await res.text());
       }
 
       if (!res.body) {
@@ -248,50 +221,50 @@ export default function DebatesPage() {
     }
   };
 
-  async function runJudgeModel(fullHistory: ResponseLog[]) {
+  const runJudgeModel = async (fullHistory: ResponseLog[]) => {
     setJudgeStatus("evaluating");
     setStatus("results");
 
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
     if (isDemoMode) {
-      await sleep(2500);
+      await sleep(1800);
       setJudgeScores({
         summary:
-          "Justice Nyay judged this as a sharply balanced simulation where every persona executed a recognizable ideological style. Sage ultimately edged ahead by synthesizing opposing claims into a more coherent frame rather than merely counterpunching. Aria delivered the most emotionally persuasive passages, while Lex stayed disciplined on structural logic. Rex remained forceful and clear, but ceded ground when the debate turned toward synthesis rather than conviction.",
+          "Justice Nyay judged this simulation as a balanced exchange with clear ideological contrast. Sage won by reframing the strongest claims from both sides into a more coherent synthesis instead of merely countering them. Aria remained the most emotionally persuasive voice, while Lex maintained the sharpest analytical discipline. Rex stayed forceful and grounded, but lost points when the debate shifted toward integration rather than conviction.",
         winner: "Sage",
         strongestMoment:
-          "Sage reframed the argument by showing that both efficiency and fairness collapse when they are treated as ends instead of instruments.",
+          "Sage exposed the hidden assumption shared by the opposing camps and used it to redefine the whole debate.",
         conclusion:
-          "The conclusion based on the discussion by Aria, Lex, Sage and Rex is that durable systems need more than speed or tradition alone. The best arguments converged on a view that legitimate progress must survive both moral scrutiny and real-world consequence.",
+          "The conclusion based on the discussion by Aria, Lex, Sage and Rex is that strong systems need both moral scrutiny and practical resilience. The best arguments converged on the idea that progress only holds when it survives contact with consequence.",
         evaluations: [
           {
             persona: "Aria",
             rank: 2,
             scores: { logic: 8, clarity: 9, evidence: 8, engagement: 9 },
             totalScore: 34,
-            standoutMove: "Reframed the debate around who pays the hidden human cost of elegant policy abstractions.",
+            standoutMove: "Forced the conversation back toward the people hidden behind clean abstractions.",
           },
           {
             persona: "Lex",
             rank: 3,
             scores: { logic: 9, clarity: 8, evidence: 9, engagement: 6 },
             totalScore: 32,
-            standoutMove: "Pressed the field back toward measurable tradeoffs when everyone else drifted into rhetoric.",
+            standoutMove: "Pressed the room to justify idealism with measurable tradeoffs.",
           },
           {
             persona: "Sage",
             rank: 1,
             scores: { logic: 10, clarity: 9, evidence: 8, engagement: 10 },
             totalScore: 37,
-            standoutMove: "Exposed the hidden assumption both sides shared and built the winning synthesis from it.",
+            standoutMove: "Reframed the argument so both sides had to answer a deeper contradiction.",
           },
           {
             persona: "Rex",
             rank: 4,
             scores: { logic: 7, clarity: 8, evidence: 7, engagement: 7 },
             totalScore: 29,
-            standoutMove: "Grounded the discussion in historical memory and the cost of destabilizing inherited systems too quickly.",
+            standoutMove: "Grounded the debate in historical memory and the cost of unstable change.",
           },
         ],
       });
@@ -317,470 +290,398 @@ export default function DebatesPage() {
       console.error(error);
       setJudgeStatus("error");
     }
-  }
-
-  const statusLabel =
-    status === "awaiting_judge"
-      ? "Transcript Ready"
-      : status === "finished"
-        ? "Debate Archive"
-        : status === "results"
-          ? judgeStatus === "evaluating"
-            ? "Judge Deliberating"
-            : judgeStatus === "error"
-              ? "Judge Interrupted"
-              : "Verdict Ready"
-          : hasTurnError
-            ? `${activePersonaName} Needs Retry`
-            : `${activePersonaName} is speaking`;
+  };
 
   const renderSetup = () => (
-    <div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr]" ref={arenaRef}>
-      <section className="surface-panel ornate-border rounded-[2rem] px-6 py-8 sm:px-8 sm:py-10 lg:px-10">
+    <motion.section
+      initial="hidden"
+      animate="show"
+      variants={fadeUp}
+      transition={{ duration: 0.55, ease: "easeOut" }}
+      className="grid gap-8 lg:grid-cols-[1fr_0.9fr]"
+    >
+      <div className="border-b border-white/8 pb-8 sm:pb-10 lg:border-b-0 lg:border-r lg:pr-10">
         <span className="section-kicker">Debate Arena</span>
         <div className="mt-6 space-y-6">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-foreground/80">
+            <SquareTerminal className="h-5 w-5" />
+          </div>
           <div className="space-y-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-accent/30 bg-accent/10 text-accent shadow-soft">
-              <SquareTerminal className="h-5 w-5" />
-            </div>
-            <h1 className="font-display text-5xl leading-[0.94] text-foreground sm:text-6xl">
-              Stage a topic and let four worldviews fight it in public.
+            <h1 className="font-display text-5xl leading-[0.92] text-foreground sm:text-6xl">
+              Choose a topic and let the arena run.
             </h1>
-            <p className="max-w-xl text-base leading-7 text-muted-foreground">
-              Each persona enters with a worldview, a speaking instinct, and a weakness they are told to own. The arena streams every argument live, then Justice Nyay scores the full transcript with a separate model.
+            <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+              Four personas debate in sequence, their responses stream live, and Justice Nyay judges the full exchange when the final round is complete.
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[1.5rem] border border-border/60 bg-black/20 p-5">
-              <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-accent">
-                Format
-              </p>
-              <p className="mt-3 font-display text-3xl text-foreground">2 x 2 arena grid</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Every persona keeps a dedicated chamber so arguments feel spatial instead of buried in a single transcript.
-              </p>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <label className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-muted-foreground">Topic</label>
+              <span className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground">{topic.length}/200</span>
             </div>
-            <div className="rounded-[1.5rem] border border-border/60 bg-black/20 p-5">
-              <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-accent">
-                Reliability
-              </p>
-              <p className="mt-3 font-display text-3xl text-foreground">Backoff on 429s</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Groq rate limits are retried automatically so long debates do not collapse at the first spike.
-              </p>
+
+            <div className="flex flex-wrap gap-2">
+              {PRESET_TOPICS.map((preset) => (
+                <button
+                  key={preset}
+                  onClick={() => setTopic(preset)}
+                  className="rounded-full border border-white/8 bg-white/5 px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {preset}
+                </button>
+              ))}
             </div>
+
+            <textarea
+              value={topic}
+              onChange={(event) => setTopic(event.target.value.slice(0, 200))}
+              placeholder="Should artificial intelligence be granted legal personhood rights?"
+              className="min-h-[140px] w-full border-y border-white/8 bg-transparent px-0 py-4 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-white/14"
+            />
           </div>
 
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="grain-button inline-flex items-center justify-center gap-3 rounded-full border border-accent/40 bg-accent px-7 py-4 font-mono text-xs uppercase tracking-[0.24em] text-accent-foreground transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_rgba(214,138,78,0.26)]"
-          >
-            Configure Debate
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
-      </section>
-
-      <section className="surface-panel rounded-[2rem] px-6 py-8 sm:px-8 sm:py-10">
-        <div className="flex items-center justify-between gap-4">
-          <span className="section-kicker">Active Cast</span>
-          <div className="flex items-center gap-2 rounded-full border border-accent/25 bg-accent/10 px-3 py-1.5 font-mono text-[0.58rem] uppercase tracking-[0.22em] text-accent">
-            Justice Nyay Included
-          </div>
-        </div>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          {PERSONA_ORDER.map((persona) => {
-            const config = PERSONA_CONFIG[persona];
-
-            return (
-              <article
-                key={persona}
-                className={`rounded-[1.6rem] border p-5 shadow-soft ${PERSONA_SURFACE[persona]}`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`h-16 w-16 shrink-0 overflow-hidden rounded-full border border-white/10 ${config.bgLight}`}>
-                    <Image src={config.avatar} alt={persona} width={64} height={64} className="h-full w-full object-cover" />
-                  </div>
-                  <div>
-                    <p className={`font-display text-3xl ${config.color}`}>{persona}</p>
-                    <p className="font-mono text-[0.58rem] uppercase tracking-[0.22em] text-muted-foreground">
-                      {config.model}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-foreground/78">{config.description}</p>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-
-        <div className="mt-6 rounded-[1.6rem] border border-[#d6a85a]/28 bg-[linear-gradient(180deg,rgba(214,168,90,0.15),rgba(0,0,0,0.18))] p-5 shadow-soft">
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 overflow-hidden rounded-full border border-[#d6a85a]/30">
-              <Image src="/avatars/judge.png" alt="Justice Nyay" width={64} height={64} className="h-full w-full object-cover" />
-            </div>
-            <div>
-              <p className="font-display text-3xl text-[#f0ca79]">Justice Nyay</p>
-              <p className="font-mono text-[0.58rem] uppercase tracking-[0.22em] text-[#e0bf73]">
-                gemini-2.5-flash
-              </p>
-              <p className="mt-2 text-sm leading-6 text-foreground/78">
-                The final evaluator. Neutral tone, structured JSON, and a verdict grounded in the full transcript.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {isModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="surface-panel w-full max-w-2xl rounded-[2rem] p-6 sm:p-8">
-            <div className="flex items-start justify-between gap-4 border-b border-border/60 pb-5">
-              <div>
-                <p className="section-kicker">Configuration</p>
-                <h2 className="mt-4 font-display text-4xl text-foreground">Calibrate the arena</h2>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-white/[0.03] text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="mt-6 space-y-8">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-4">
-                  <label className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-muted-foreground">
-                    Debate Topic
-                  </label>
-                  <span className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground">
-                    {topic.length}/200
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {PRESET_TOPICS.map((preset) => (
-                    <button
-                      key={preset}
-                      onClick={() => setTopic(preset)}
-                      className="rounded-full border border-border/70 bg-white/[0.03] px-4 py-2 text-left font-mono text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:border-accent/35 hover:text-foreground"
-                    >
-                      {preset}
-                    </button>
-                  ))}
-                </div>
-                <textarea
-                  value={topic}
-                  onChange={(event) => setTopic(event.target.value.slice(0, 200))}
-                  placeholder="Should artificial intelligence be granted legal personhood rights?"
-                  className="min-h-[130px] w-full rounded-[1.5rem] border border-border/70 bg-black/20 px-5 py-4 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/55 focus:border-accent/35"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <label className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-muted-foreground">
-                  Number of Rounds
-                </label>
+          <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div className="space-y-3">
+              <label className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-muted-foreground">Rounds</label>
                 <div className="grid grid-cols-3 gap-3">
                   {[3, 5, 7].map((rounds) => (
                     <button
                       key={rounds}
                       onClick={() => setTargetRounds(rounds as 3 | 5 | 7)}
-                      className={`rounded-[1.2rem] border px-4 py-4 font-mono text-xs uppercase tracking-[0.18em] transition-all ${
+                      className={`border-b px-4 py-3 font-mono text-xs uppercase tracking-[0.16em] transition-all ${
                         targetRounds === rounds
-                          ? "border-accent/40 bg-accent text-accent-foreground shadow-soft"
-                          : "border-border/70 bg-white/[0.03] text-muted-foreground hover:text-foreground"
+                          ? "border-white/20 text-foreground"
+                          : "border-white/8 text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      {rounds} rounds
-                    </button>
-                  ))}
-                </div>
+                      {rounds}
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div className="flex items-center justify-between gap-4 rounded-[1.4rem] border border-border/60 bg-black/20 px-5 py-4">
-                <div>
-                  <p className="font-mono text-[0.62rem] uppercase tracking-[0.22em] text-accent">Demo Mode</p>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                    Run a local simulation without hitting Groq or Gemini.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsDemoMode((value) => !value)}
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full border transition-colors ${
-                    isDemoMode ? "border-accent/50 bg-accent" : "border-border/70 bg-muted"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4.5 w-4.5 transform rounded-full bg-white transition-transform ${
-                      isDemoMode ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
+            <div className="flex items-center gap-3 border-b border-white/8 px-0 py-3">
+              <div>
+                <p className="font-mono text-[0.58rem] uppercase tracking-[0.18em] text-muted-foreground">Demo Mode</p>
               </div>
-
               <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  handleStart();
-                }}
-                disabled={!topic.trim()}
-                className="grain-button inline-flex w-full items-center justify-center gap-3 rounded-full border border-accent/40 bg-accent px-6 py-4 font-mono text-xs uppercase tracking-[0.24em] text-accent-foreground transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_rgba(214,138,78,0.26)] disabled:cursor-not-allowed disabled:opacity-40"
+                type="button"
+                onClick={() => setIsDemoMode((value) => !value)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isDemoMode ? "bg-primary" : "bg-muted"}`}
               >
-                <Flame className="h-4 w-4" />
-                Fire The Debate
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isDemoMode ? "translate-x-6" : "translate-x-1"}`} />
               </button>
             </div>
           </div>
+
+          <button
+            onClick={handleStart}
+            disabled={!topic.trim()}
+            className="grain-button inline-flex w-full items-center justify-center gap-3 rounded-full bg-primary px-7 py-4 font-mono text-xs uppercase tracking-[0.2em] text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Flame className="h-4 w-4" />
+            Start Debate
+          </button>
         </div>
-      ) : null}
-    </div>
+      </div>
+
+      <motion.div variants={fadeUp} transition={{ delay: 0.08, duration: 0.55 }} className="pt-2 lg:pl-2">
+        <span className="section-kicker">Cast</span>
+        <div className="mt-6 grid gap-0 sm:grid-cols-2 sm:divide-x sm:divide-white/8">
+          {PERSONA_ORDER.map((persona, index) => {
+            const config = PERSONA_CONFIG[persona];
+            return (
+              <motion.div
+                key={persona}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + index * 0.06, duration: 0.45, ease: "easeOut" }}
+                className={`border-b border-white/8 p-4 ${index >= 2 ? "sm:border-b-0" : ""}`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`h-14 w-14 overflow-hidden rounded-full ${config.bgLight}`}>
+                    <Image src={config.avatar} alt={persona} width={56} height={56} className="h-full w-full object-cover" />
+                  </div>
+                  <div>
+                    <p className={`font-display text-3xl ${config.color}`}>{persona}</p>
+                    <p className="font-mono text-[0.58rem] uppercase tracking-[0.18em] text-muted-foreground">{config.model}</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{config.description}</p>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.div>
+    </motion.section>
   );
 
   const renderArena = () => (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6" ref={arenaRef}>
-      <section className="surface-panel rounded-[2rem] px-5 py-5 sm:px-6 sm:py-6 lg:px-8">
+    <div className="space-y-6">
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="border-b border-white/8 px-0 py-5 sm:py-6"
+      >
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="section-kicker">Live Chamber</span>
-              <div className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 font-mono text-[0.58rem] uppercase tracking-[0.22em] text-accent">
-                {statusLabel}
+              <span className="section-kicker">Active Debate</span>
+              <div className="rounded-full border border-white/8 bg-white/5 px-3 py-1.5 font-mono text-[0.58rem] uppercase tracking-[0.18em] text-muted-foreground">
+                {status === "awaiting_judge"
+                  ? "Awaiting Judge"
+                  : status === "finished"
+                    ? "Transcript Complete"
+                    : hasTurnError
+                      ? `${activePersonaName} needs retry`
+                      : `${activePersonaName} speaking`}
               </div>
             </div>
-            <div className="grid gap-4 lg:grid-cols-[auto_1fr] lg:items-end">
-              <div className="inline-flex items-center rounded-full border border-border/70 bg-black/20 p-1">
+            <div className="space-y-3">
+              <div className="inline-flex items-center rounded-full border border-white/8 bg-white/5 p-1">
                 <button
                   onClick={() => setViewRound((value) => Math.max(1, value - 1))}
                   disabled={viewRound === 1}
-                  className="rounded-full px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
+                  className="rounded-full px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
                 >
                   Prev
                 </button>
-                <span className="rounded-full border border-white/8 bg-white/[0.03] px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] text-foreground">
+                <span className="rounded-full bg-white/8 px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-foreground">
                   Round {viewRound}/{targetRounds}
                 </span>
                 <button
                   onClick={() => setViewRound((value) => Math.min(targetRounds, value + 1))}
                   disabled={viewRound === targetRounds || (viewRound >= currentRound && status !== "finished" && status !== "results")}
-                  className="rounded-full px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
+                  className="rounded-full px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
                 >
                   Next
                 </button>
               </div>
-              <div>
-                <p className="font-display text-3xl leading-tight text-foreground sm:text-4xl">
-                  {topic}
-                </p>
-              </div>
+              <h1 className="font-display text-4xl leading-tight text-foreground sm:text-5xl">{topic}</h1>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {status === "awaiting_judge" ? (
-              <button
-                onClick={() => runJudgeModel(history)}
-                className="grain-button inline-flex items-center gap-2 rounded-full border border-[#d6a85a]/34 bg-[#d6a85a] px-5 py-3 font-mono text-[0.66rem] uppercase tracking-[0.2em] text-[#23160b] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(214,168,90,0.24)]"
-              >
-                <Scale className="h-4 w-4" />
-                Judge Transcript
-              </button>
-            ) : null}
-
             {status === "finished" ? (
               <button
                 onClick={() => setStatus("results")}
-                className="rounded-full border border-accent/30 bg-accent/10 px-5 py-3 font-mono text-[0.66rem] uppercase tracking-[0.2em] text-accent transition-colors hover:bg-accent hover:text-accent-foreground"
+                className="rounded-full border border-white/8 bg-white/5 px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-foreground transition-colors hover:bg-white/8"
               >
                 View Verdict
               </button>
             ) : null}
-
             <button
               onClick={handleRestart}
-              className="rounded-full border border-border/70 bg-white/[0.03] px-5 py-3 font-mono text-[0.66rem] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/5 px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
             >
+              <RotateCcw className="h-3.5 w-3.5" />
               Restart
             </button>
             <button
               onClick={handleNewDebate}
-              className="rounded-full border border-border/70 bg-white/[0.03] px-5 py-3 font-mono text-[0.66rem] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-full border border-white/8 bg-white/5 px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
             >
               New Topic
             </button>
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="grid flex-1 gap-4 lg:grid-cols-2">
-        {PERSONA_ORDER.map((persona) => {
+      <section className="overflow-hidden border-y border-white/8 lg:grid lg:grid-cols-2 lg:divide-x lg:divide-white/8">
+        {PERSONA_ORDER.map((persona, index) => {
           const config = PERSONA_CONFIG[persona];
-          const isTurn = status === "debating" && activePersonaName === persona;
           const roundEntry = history.find((entry) => entry.persona === persona && entry.round === viewRound);
+          const isTurn = status === "debating" && activePersonaName === persona;
           const isCurrentTurnViewing = isTurn && currentRound === viewRound;
 
           return (
-            <article
+            <motion.article
               key={persona}
-              className={`surface-panel relative min-h-[310px] overflow-hidden rounded-[1.8rem] border transition-all duration-300 ${
-                isTurn ? `${PERSONA_SURFACE[persona]} shadow-[0_24px_70px_rgba(0,0,0,0.32)]` : "border-border/70"
-              }`}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0, scale: isTurn ? 1.01 : 1 }}
+              transition={{ delay: index * 0.05, duration: 0.35, ease: "easeOut" }}
+              className={`min-h-[300px] border-b border-white/8 p-5 sm:p-6 lg:border-b-0 ${isTurn ? `bg-white/[0.03]` : ""}`}
             >
-              <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,248,232,0.3),transparent)]" />
-              <div className="flex h-full flex-col p-5 sm:p-6">
+              <div className="flex h-full flex-col">
                 <div className="flex items-start justify-between gap-4 border-b border-white/6 pb-5">
                   <div className="flex items-start gap-4">
-                    <div className={`h-16 w-16 shrink-0 overflow-hidden rounded-full border border-white/10 ${config.bgLight}`}>
-                      <Image src={config.avatar} alt={persona} width={64} height={64} className="h-full w-full object-cover" />
+                    <div className={`h-14 w-14 overflow-hidden rounded-full ${config.bgLight}`}>
+                      <Image src={config.avatar} alt={persona} width={56} height={56} className="h-full w-full object-cover" />
                     </div>
                     <div>
-                      <p className={`font-display text-4xl leading-none ${config.color}`}>{persona}</p>
-                      <p className="mt-2 font-mono text-[0.58rem] uppercase tracking-[0.22em] text-muted-foreground">
-                        {config.model}
-                      </p>
-                      <p className="mt-2 text-sm leading-6 text-foreground/76">{config.description}</p>
+                      <p className={`font-display text-3xl ${config.color}`}>{persona}</p>
+                      <p className="font-mono text-[0.58rem] uppercase tracking-[0.18em] text-muted-foreground">{config.model}</p>
                     </div>
                   </div>
-
-                  <div className="rounded-full border border-white/8 bg-black/20 px-3 py-2 font-mono text-[0.58rem] uppercase tracking-[0.2em] text-muted-foreground">
-                    {isTurn ? "Live turn" : `Round ${viewRound}`}
+                  <div className="rounded-full border border-white/8 bg-white/5 px-3 py-1.5 font-mono text-[0.58rem] uppercase tracking-[0.18em] text-muted-foreground">
+                    {isTurn ? "Live" : `Round ${viewRound}`}
                   </div>
                 </div>
 
                 <div className="mt-5 flex-1 overflow-y-auto pr-1">
-                  {!roundEntry && !isCurrentTurnViewing ? (
-                    <div className="flex h-full min-h-[170px] items-center justify-center rounded-[1.5rem] border border-dashed border-white/10 bg-black/18 px-6 text-center text-sm leading-7 text-muted-foreground">
-                      This chamber is still waiting for Round {viewRound}.
-                    </div>
-                  ) : null}
-
-                  {roundEntry ? (
-                    <div className="rounded-[1.5rem] border border-white/8 bg-black/24 px-5 py-4 text-sm leading-7 text-foreground/88 shadow-soft">
-                      {roundEntry.text}
-                    </div>
-                  ) : null}
-
-                  {isCurrentTurnViewing && !hasTurnError ? (
-                    <div className="mt-4 rounded-[1.5rem] border border-accent/20 bg-[linear-gradient(180deg,rgba(214,138,78,0.11),rgba(0,0,0,0.18))] px-5 py-4 text-sm leading-7 text-foreground/90 shadow-soft">
-                      {streamingText}
-                      <span className="ml-2 inline-block h-4 w-1.5 animate-blink rounded-full bg-accent align-middle" />
-                    </div>
-                  ) : null}
-
-                  {isCurrentTurnViewing && hasTurnError ? (
-                    <div className="mt-4 rounded-[1.5rem] border border-destructive/30 bg-destructive/10 px-5 py-5 shadow-soft">
-                      <p className="font-display text-3xl text-destructive">Transmission interrupted</p>
-                      <p className="mt-2 max-w-lg text-sm leading-7 text-destructive/85">
-                        {persona} lost the thread during this turn. Retry the same round and keep the rest of the transcript intact.
-                      </p>
-                      <button
-                        onClick={retryCurrentTurn}
-                        className="mt-4 rounded-full border border-destructive/40 bg-destructive px-5 py-3 font-mono text-[0.66rem] uppercase tracking-[0.2em] text-destructive-foreground transition-colors hover:bg-destructive/90"
+                  <AnimatePresence mode="wait">
+                    {!roundEntry && !isCurrentTurnViewing ? (
+                      <motion.div
+                        key="empty"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex h-full min-h-[170px] items-center justify-center px-0 text-center text-sm leading-7 text-muted-foreground"
                       >
-                        Retry Turn
-                      </button>
-                    </div>
-                  ) : null}
+                        Waiting for {persona} in Round {viewRound}.
+                      </motion.div>
+                    ) : null}
+
+                    {roundEntry ? (
+                      <motion.div
+                        key={`history-${persona}-${viewRound}`}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -12 }}
+                        className="px-0 py-1 text-sm leading-7 text-foreground/88"
+                      >
+                        {roundEntry.text}
+                      </motion.div>
+                    ) : null}
+
+                    {isCurrentTurnViewing && !hasTurnError ? (
+                      <motion.div
+                        key={`stream-${persona}-${viewRound}`}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -12 }}
+                        className="mt-4 border-t border-white/8 px-0 pt-4 text-sm leading-7 text-foreground/88"
+                      >
+                        {streamingText}
+                        <span className="ml-2 inline-block h-4 w-1.5 animate-blink rounded-full bg-foreground/70 align-middle" />
+                      </motion.div>
+                    ) : null}
+
+                    {isCurrentTurnViewing && hasTurnError ? (
+                      <motion.div
+                        key={`error-${persona}-${viewRound}`}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -12 }}
+                        className="mt-4 border-t border-destructive/25 bg-destructive/10 px-4 py-5"
+                      >
+                        <p className="font-display text-3xl text-destructive">Turn failed</p>
+                        <p className="mt-2 text-sm leading-7 text-destructive/85">
+                          Retry this round and keep the rest of the transcript intact.
+                        </p>
+                        <button
+                          onClick={retryCurrentTurn}
+                          className="mt-4 rounded-full border border-destructive/40 bg-destructive px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-destructive-foreground transition-colors hover:bg-destructive/90"
+                        >
+                          Retry Turn
+                        </button>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
                 </div>
               </div>
-            </article>
+            </motion.article>
           );
         })}
       </section>
 
-      {status === "awaiting_judge" || hasTurnError ? (
-        <section className="surface-panel rounded-[1.8rem] px-5 py-5 sm:px-6">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-accent/30 bg-accent/10 text-accent">
-                {hasTurnError ? <Sparkles className="h-5 w-5" /> : <Trophy className="h-5 w-5" />}
+      <AnimatePresence>
+        {status === "awaiting_judge" || hasTurnError ? (
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 18 }}
+            className="border-t border-white/8 px-0 py-5 sm:py-6"
+          >
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-foreground/80">
+                  {hasTurnError ? <Sparkles className="h-5 w-5" /> : <Trophy className="h-5 w-5" />}
+                </div>
+                <div>
+                  <p className="font-display text-3xl text-foreground">
+                    {hasTurnError ? "One turn needs a retry." : "The transcript is ready for judgment."}
+                  </p>
+                  <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                    {hasTurnError
+                      ? "Use retry to continue the failed turn without discarding finished rounds."
+                      : "Send the completed debate to Justice Nyay for the final score and verdict."}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-display text-3xl text-foreground">
-                  {hasTurnError ? "One persona needs a clean retry." : "The debate transcript is ready for judgment."}
-                </p>
-                <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">
-                  {hasTurnError
-                    ? "Use retry to continue the exact failed turn without discarding the completed rounds."
-                    : "Justice Nyay will score logic, clarity, evidence, and engagement across the full exchange and declare the winner."}
-                </p>
-              </div>
-            </div>
 
-            {hasTurnError ? (
-              <button
-                onClick={retryCurrentTurn}
-                className="rounded-full border border-destructive/40 bg-destructive px-5 py-3 font-mono text-[0.66rem] uppercase tracking-[0.2em] text-destructive-foreground transition-colors hover:bg-destructive/90"
-              >
-                Retry Current Turn
-              </button>
-            ) : (
-              <button
-                onClick={() => runJudgeModel(history)}
-                className="grain-button inline-flex items-center justify-center gap-3 rounded-full border border-[#d6a85a]/34 bg-[#d6a85a] px-6 py-3 font-mono text-[0.66rem] uppercase tracking-[0.2em] text-[#23160b] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(214,168,90,0.24)]"
-              >
-                Send To Justice Nyay
-                <Scale className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </section>
-      ) : null}
+              {hasTurnError ? (
+                <button
+                  onClick={retryCurrentTurn}
+                  className="rounded-full border border-destructive/40 bg-destructive px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-destructive-foreground transition-colors hover:bg-destructive/90"
+                >
+                  Retry Current Turn
+                </button>
+              ) : (
+                <button
+                  onClick={() => runJudgeModel(history)}
+                  className="grain-button inline-flex items-center gap-3 rounded-full bg-primary px-6 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5"
+                >
+                  Send To Judge
+                  <Scale className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </motion.section>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 
   const renderResults = () => (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6" ref={arenaRef}>
-      <section className="surface-panel rounded-[2rem] px-5 py-5 sm:px-6 sm:py-6 lg:px-8">
+    <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      <div className="border-b border-white/8 px-0 py-5 sm:py-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="section-kicker">Judgment Chamber</span>
-              <div className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 font-mono text-[0.58rem] uppercase tracking-[0.22em] text-accent">
-                {judgeStatus === "evaluating"
-                  ? "Evaluating"
-                  : judgeStatus === "error"
-                    ? "Retry Available"
-                    : "Verdict Ready"}
-              </div>
-            </div>
-            <div>
-              <p className="font-display text-4xl leading-tight text-foreground sm:text-5xl">{topic}</p>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
-                Review the final verdict, strongest moment, and comparative score breakdown from Justice Nyay.
-              </p>
-            </div>
+          <div className="space-y-3">
+            <span className="section-kicker">Judgment</span>
+            <h1 className="font-display text-4xl leading-tight text-foreground sm:text-5xl">{topic}</h1>
           </div>
-
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setStatus("finished")}
-              className="rounded-full border border-border/70 bg-white/[0.03] px-5 py-3 font-mono text-[0.66rem] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-full border border-white/8 bg-white/5 px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
             >
               View Debate
             </button>
             <button
               onClick={handleNewDebate}
-              className="rounded-full border border-border/70 bg-white/[0.03] px-5 py-3 font-mono text-[0.66rem] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-full border border-white/8 bg-white/5 px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
             >
               New Debate
             </button>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section className="surface-panel rounded-[2rem] p-4 sm:p-5">
-        <JudgeResults scores={judgeScores} status={judgeStatus} onRetry={() => runJudgeModel(history)} />
-      </section>
-    </div>
+      <JudgeResults scores={judgeScores} status={judgeStatus} onRetry={() => runJudgeModel(history)} />
+    </motion.section>
   );
 
   return (
     <main className="px-4 pb-10 sm:px-6 lg:px-8">
-      {status === "setup" ? renderSetup() : status === "results" ? renderResults() : renderArena()}
+      <div className="mx-auto max-w-7xl">
+        <AnimatePresence mode="wait">
+          {status === "setup" ? (
+            <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              {renderSetup()}
+            </motion.div>
+          ) : status === "results" ? (
+            <motion.div key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              {renderResults()}
+            </motion.div>
+          ) : (
+            <motion.div key="arena" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              {renderArena()}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </main>
   );
 }

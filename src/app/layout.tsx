@@ -6,6 +6,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
+import { ScrollReset } from "@/components/layout/ScrollReset";
 
 const display = Cormorant_Garamond({
   subsets: ["latin"],
@@ -40,6 +41,7 @@ export default function RootLayout({
       <body
         className={`${display.variable} ${body.variable} ${mono.variable} min-h-screen bg-background font-body text-foreground antialiased`}
       >
+        <ScrollReset />
         <div className="site-shell">
           <div className="site-shell__glow site-shell__glow--left" />
           <div className="site-shell__glow site-shell__glow--right" />

@@ -1,289 +1,206 @@
+"use client";
+
 import Link from "next/link";
-import {
-  ArrowRight,
-  BookOpen,
-  Laugh,
-  Scale,
-  Sparkles,
-  Swords,
-  Trophy,
-} from "lucide-react";
+import { motion } from "motion/react";
+import { ArrowRight, BookOpen, Laugh, MessageSquareText, Scale, Trophy } from "lucide-react";
 
 const personas = [
+  { name: "Aria", role: "Progressive", color: "text-purple-400" },
+  { name: "Lex", role: "Libertarian", color: "text-blue-400" },
+  { name: "Sage", role: "Philosopher", color: "text-green-400" },
+  { name: "Rex", role: "Traditionalist", color: "text-red-400" },
+];
+
+const features = [
   {
-    name: "Aria",
-    role: "Progressive Idealist",
-    note: "Frames debates through systems, vulnerability, and lived stakes.",
-    accent: "text-[#cf97ff]",
-    glow: "from-[#cf97ff]/24 via-[#cf97ff]/10 to-transparent",
+    title: "Live streaming",
+    copy: "Each persona speaks in real time so the exchange feels like an unfolding event, not a static answer.",
   },
   {
-    name: "Lex",
-    role: "Libertarian Analyst",
-    note: "Cold statistical pressure with a bias toward liberty and proof.",
-    accent: "text-[#84c6ff]",
-    glow: "from-[#84c6ff]/24 via-[#84c6ff]/10 to-transparent",
+    title: "Structured judging",
+    copy: "Justice Nyay scores logic, clarity, evidence, and engagement after the full transcript is complete.",
   },
   {
-    name: "Sage",
-    role: "Philosophical Interrogator",
-    note: "Treats every contradiction as evidence and every certainty as bait.",
-    accent: "text-[#95ddb5]",
-    glow: "from-[#95ddb5]/24 via-[#95ddb5]/10 to-transparent",
-  },
-  {
-    name: "Rex",
-    role: "Traditionalist Hammer",
-    note: "Defends continuity, order, and ideas that survived history's pressure.",
-    accent: "text-[#ff9b84]",
-    glow: "from-[#ff9b84]/24 via-[#ff9b84]/10 to-transparent",
+    title: "Prompted characters",
+    copy: "The models are shaped as personas with worldviews, debate styles, and weaknesses they must own.",
   },
 ];
 
-const upcomingModes = [
-  {
-    title: "Joke Battle",
-    href: "/joke-battle",
-    icon: Laugh,
-    copy: "A sharp two-model duel where timing, wit, and escalation matter more than pure logic.",
-  },
-  {
-    title: "Story Simulation",
-    href: "/story-sim",
-    icon: BookOpen,
-    copy: "Role-assigned AI fiction with personalities colliding inside one controlled narrative chamber.",
-  },
-  {
-    title: "Leaderboard",
-    href: "/leaderboard",
-    icon: Trophy,
-    copy: "Track which personas keep winning when the same topics are stress-tested at scale.",
-  },
+const modes = [
+  { title: "Joke Battle", href: "/joke-battle", icon: Laugh },
+  { title: "Story Simulation", href: "/story-sim", icon: BookOpen },
+  { title: "Leaderboard", href: "/leaderboard", icon: Trophy },
 ];
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0 },
+};
 
 export default function Home() {
   return (
-    <div className="relative overflow-hidden px-4 pb-10 sm:px-6 lg:px-8">
-      <main className="mx-auto flex max-w-7xl flex-col gap-8">
-        <section className="surface-panel ornate-border relative overflow-hidden rounded-[2.25rem] px-6 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-14">
-          <div className="absolute inset-y-0 right-0 hidden w-[38%] border-l border-white/5 bg-[linear-gradient(180deg,rgba(214,138,78,0.08),transparent_40%,rgba(88,135,132,0.06))] lg:block" />
-          <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
-            <div className="relative z-10 space-y-8">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-                <div className="space-y-4">
-                  <span className="section-kicker">Live Reasoning Arena</span>
-                  <div className="max-w-4xl space-y-4">
-                    <h1 className="font-display text-6xl leading-[0.9] tracking-tight text-foreground sm:text-7xl lg:text-[6.5rem]">
-                      Where AI personas stop agreeing and start colliding.
-                    </h1>
-                    <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                      PlayGroundAI stages structured ideological combat between purpose-built AI voices, then hands the transcript to a neutral judge. It is part spectacle, part product, part observatory for how models reason under pressure.
+    <main className="px-4 pb-10 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-12">
+        <motion.section
+          initial="hidden"
+          animate="show"
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          variants={fadeUp}
+          className="mt-4 grid min-h-[calc(100svh-7rem)] items-center gap-12 border-b border-white/8 pb-12 pt-4 sm:mt-6 sm:min-h-[calc(100svh-8rem)] sm:pb-16 lg:grid-cols-[1.1fr_0.9fr]"
+        >
+          <div className="space-y-8">
+            <motion.div variants={fadeUp} transition={{ delay: 0.05, duration: 0.55 }} className="space-y-4">
+              <span className="section-kicker">Live AI Arena</span>
+              <h1 className="font-display text-5xl leading-[0.92] text-foreground sm:text-6xl lg:text-7xl">
+                Watch distinct AI personas debate your ideas in public.
+              </h1>
+              <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+                PlayGroundAI turns prompting into a staged format: four personas, one topic, streamed arguments, and a neutral judge who decides what actually held up.
+              </p>
+            </motion.div>
+
+            <motion.div
+              variants={fadeUp}
+              transition={{ delay: 0.12, duration: 0.55 }}
+              className="flex flex-col gap-3 sm:flex-row"
+            >
+              <Link
+                href="/debates"
+                className="grain-button inline-flex items-center justify-center gap-3 rounded-full bg-primary px-7 py-4 font-mono text-xs uppercase tracking-[0.2em] text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5"
+              >
+                Start A Debate
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <a
+                href="https://x.com/Yajush_who"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-full border border-white/8 bg-white/5 px-7 py-4 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Follow Updates
+              </a>
+            </motion.div>
+
+            <motion.div
+              variants={fadeUp}
+              transition={{ delay: 0.18, duration: 0.55 }}
+              className="grid gap-4 border-t border-white/8 pt-6 sm:grid-cols-3"
+            >
+              {features.map((feature, index) => (
+                <div
+                  key={feature.title}
+                  className={`py-2 ${index < features.length - 1 ? "sm:border-r sm:border-white/8 sm:pr-5" : ""} ${index > 0 ? "sm:pl-1" : ""}`}
+                >
+                  <p className="font-display text-2xl text-foreground">{feature.title}</p>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{feature.copy}</p>
+                </div>
+              ))}
+            </motion.div>
+          </div>
+
+          <motion.div
+            variants={fadeUp}
+            transition={{ delay: 0.12, duration: 0.6 }}
+            className="border-l-0 border-t border-white/8 pt-6 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0"
+          >
+            <div className="flex items-center justify-between">
+              <span className="section-kicker">Arena Preview</span>
+              <Scale className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="mt-8 space-y-3">
+              {personas.map((persona, index) => (
+                <motion.div
+                  key={persona.name}
+                  initial={{ opacity: 0, x: 18 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 + index * 0.08, duration: 0.45, ease: "easeOut" }}
+                  className="flex items-center justify-between border-b border-white/8 py-4 last:border-b-0"
+                >
+                  <div>
+                    <p className={`font-display text-3xl ${persona.color}`}>{persona.name}</p>
+                    <p className="font-mono text-[0.58rem] uppercase tracking-[0.18em] text-muted-foreground">
+                      {persona.role}
                     </p>
                   </div>
-                </div>
-                <div className="rounded-[1.5rem] border border-accent/25 bg-black/20 px-5 py-4 shadow-soft sm:max-w-[14rem]">
-                  <p className="font-mono text-[0.62rem] uppercase tracking-[0.28em] text-accent">Current Mode</p>
-                  <p className="mt-2 font-display text-3xl text-foreground">Debate Arena</p>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Four voices. Real-time stream. One verdict.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Link
-                  href="/debates"
-                  className="grain-button inline-flex items-center justify-center gap-3 rounded-full border border-accent/40 bg-accent px-7 py-4 font-mono text-xs uppercase tracking-[0.22em] text-accent-foreground transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(214,138,78,0.24)]"
-                >
-                  Enter The Arena
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <a
-                  href="https://x.com/Yajush_who"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-3 rounded-full border border-border/70 bg-white/[0.03] px-6 py-4 font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground transition-colors hover:border-accent/30 hover:text-foreground"
-                >
-                  Follow Build Notes
-                </a>
-              </div>
-
-              <div className="grid gap-4 pt-4 sm:grid-cols-3">
-                <div className="rounded-[1.4rem] border border-border/60 bg-white/[0.03] p-5">
-                  <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-muted-foreground">
-                    Streaming
-                  </p>
-                  <p className="mt-3 font-display text-3xl text-foreground">SSE</p>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Token-by-token responses arrive live instead of appearing as a static wall of text.
-                  </p>
-                </div>
-                <div className="rounded-[1.4rem] border border-border/60 bg-white/[0.03] p-5">
-                  <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-muted-foreground">
-                    Arbitration
-                  </p>
-                  <p className="mt-3 font-display text-3xl text-foreground">Gemini</p>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Justice Nyay scores logic, clarity, evidence, and engagement with structured output.
-                  </p>
-                </div>
-                <div className="rounded-[1.4rem] border border-border/60 bg-white/[0.03] p-5">
-                  <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-muted-foreground">
-                    Thesis
-                  </p>
-                  <p className="mt-3 font-display text-3xl text-foreground">Prompt = Persona</p>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Every model is given a worldview, debating instinct, and weakness it must own.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative z-10 flex flex-col gap-4 lg:pl-6">
-              <div className="rounded-[1.8rem] border border-accent/20 bg-[radial-gradient(circle_at_top,rgba(214,138,78,0.22),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-6 shadow-soft">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[0.62rem] uppercase tracking-[0.3em] text-accent">
-                    Observatory Readout
-                  </span>
-                  <Scale className="h-5 w-5 text-accent" />
-                </div>
-                <div className="mt-8 space-y-5">
-                  <div className="flex items-end justify-between border-b border-white/8 pb-4">
-                    <div>
-                      <p className="font-display text-5xl text-foreground">04</p>
-                      <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-muted-foreground">
-                        fixed personas
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-display text-5xl text-foreground">01</p>
-                      <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-muted-foreground">
-                        neutral judge
-                      </p>
-                    </div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary/70">
+                    <MessageSquareText className="h-4 w-4 text-foreground/80" />
                   </div>
-                  <div className="grid gap-3">
-                    {personas.map((persona) => (
-                      <div
-                        key={persona.name}
-                        className={`rounded-[1.2rem] border border-white/8 bg-gradient-to-r ${persona.glow} p-4`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className={`font-display text-3xl ${persona.accent}`}>{persona.name}</p>
-                            <p className="font-mono text-[0.6rem] uppercase tracking-[0.24em] text-muted-foreground">
-                              {persona.role}
-                            </p>
-                          </div>
-                          <Sparkles className={`h-4 w-4 ${persona.accent}`} />
-                        </div>
-                        <p className="mt-3 text-sm leading-6 text-foreground/78">{persona.note}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                </motion.div>
+              ))}
             </div>
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
-        <section className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div className="surface-panel rounded-[2rem] p-7 sm:p-8">
-            <span className="section-kicker">Why It Feels Different</span>
-            <div className="mt-6 space-y-6">
-              <h2 className="font-display text-4xl leading-tight text-foreground sm:text-5xl">
-                This is less chatbot, more editorialized collision chamber.
-              </h2>
-              <p className="text-base leading-7 text-muted-foreground">
-                The interface is designed like a late-night debate salon crossed with a technical observatory. The memorable element is not a mascot or gimmick. It is the feeling that every screen is a stage built to expose reasoning under heat.
-              </p>
-            </div>
+        <motion.section
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.2 }}
+          variants={fadeUp}
+          transition={{ duration: 0.55, ease: "easeOut" }}
+          className="grid min-h-[calc(100svh-7rem)] content-center gap-8 border-b border-white/8 py-12 sm:min-h-[calc(100svh-8rem)] lg:grid-cols-[0.9fr_1.1fr]"
+        >
+          <div>
+            <span className="section-kicker">Product Thesis</span>
+            <h2 className="mt-5 font-display text-4xl leading-tight text-foreground sm:text-5xl">
+              The point is not just answers. It is conflict, pressure, and judgment.
+            </h2>
           </div>
-
-          <div className="surface-panel rounded-[2rem] p-7 sm:p-8">
-            <div className="flex items-center justify-between gap-4">
-              <span className="section-kicker">Arena Mechanics</span>
-              <Swords className="h-5 w-5 text-accent" />
-            </div>
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
-              <div className="rounded-[1.4rem] border border-border/60 bg-black/20 p-5">
-                <p className="font-display text-3xl text-foreground">01</p>
-                <p className="mt-3 font-mono text-[0.62rem] uppercase tracking-[0.24em] text-accent">
-                  Configure
-                </p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Choose a topic, pick the number of rounds, or switch into demo mode for UI-only runs.
-                </p>
-              </div>
-              <div className="rounded-[1.4rem] border border-border/60 bg-black/20 p-5">
-                <p className="font-display text-3xl text-foreground">02</p>
-                <p className="mt-3 font-mono text-[0.62rem] uppercase tracking-[0.24em] text-accent">
-                  Observe
-                </p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Watch each persona stream its argument live, round by round, while history accumulates in the grid.
-                </p>
-              </div>
-              <div className="rounded-[1.4rem] border border-border/60 bg-black/20 p-5">
-                <p className="font-display text-3xl text-foreground">03</p>
-                <p className="mt-3 font-mono text-[0.62rem] uppercase tracking-[0.24em] text-accent">
-                  Judge
-                </p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Send the full transcript to Justice Nyay and get a winner, strongest moment, and scored breakdown.
-                </p>
-              </div>
-            </div>
+          <div className="border-t border-white/8 pt-6 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
+            <p className="text-base leading-7 text-muted-foreground sm:text-lg">
+              PlayGroundAI works when the interface stays quiet and the ideas become the spectacle. The design should feel precise, minimal, and fast enough that the streamed debate remains the center of attention.
+            </p>
           </div>
-        </section>
+        </motion.section>
 
-        <section className="surface-panel rounded-[2rem] p-7 sm:p-8 lg:p-10">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <motion.section
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.2 }}
+          variants={fadeUp}
+          transition={{ duration: 0.55, ease: "easeOut" }}
+          className="flex min-h-[calc(100svh-7rem)] flex-col justify-center py-12 sm:min-h-[calc(100svh-8rem)]"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <span className="section-kicker">Expansion Surface</span>
-              <h2 className="mt-5 font-display text-4xl leading-tight text-foreground sm:text-5xl">
-                More modes are staged as extensions of the same arena logic.
-              </h2>
+              <span className="section-kicker">More Modes</span>
+              <h2 className="mt-4 font-display text-4xl text-foreground sm:text-5xl">The arena expands beyond debates.</h2>
             </div>
-            <p className="max-w-xl text-sm leading-7 text-muted-foreground sm:text-base">
-              The product idea is larger than debate: humor duels, narrative simulations, and ranking systems all belong to the same world if the interface feels authored instead of templated.
+            <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
+              These routes are staged next, but the same product language should carry across humor, storytelling, and ranking.
             </p>
           </div>
 
-          <div className="mt-8 grid gap-4 lg:grid-cols-3">
-            {upcomingModes.map((mode) => {
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {modes.map((mode, index) => {
               const Icon = mode.icon;
+
               return (
-                <Link
+                <motion.div
                   key={mode.title}
-                  href={mode.href}
-                  className="group rounded-[1.6rem] border border-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.1))] p-6 transition-all duration-300 hover:-translate-y-1 hover:border-accent/35 hover:bg-[linear-gradient(180deg,rgba(214,138,78,0.09),rgba(0,0,0,0.12))]"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ delay: index * 0.08, duration: 0.45, ease: "easeOut" }}
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full border border-accent/25 bg-accent/10 text-accent">
+                  <Link
+                    href={mode.href}
+                    className="group block border-t border-white/8 pt-5 transition-colors duration-300 hover:text-foreground"
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-foreground/80">
                       <Icon className="h-5 w-5" />
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-accent" />
-                  </div>
-                  <h3 className="mt-8 font-display text-3xl text-foreground">{mode.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{mode.copy}</p>
-                </Link>
+                    <h3 className="mt-6 font-display text-3xl text-foreground">{mode.title}</h3>
+                    <div className="mt-4 inline-flex items-center gap-2 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors group-hover:text-foreground">
+                      Explore route
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </div>
+                  </Link>
+                </motion.div>
               );
             })}
           </div>
-        </section>
-      </main>
-
-      <footer className="mx-auto mt-8 max-w-7xl px-2 pb-6 pt-2">
-        <div className="flex flex-col gap-3 rounded-[1.6rem] border border-border/60 bg-black/20 px-6 py-5 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-muted-foreground">
-            Built by Yajush Srivastava · 2026
-          </p>
-          <p className="max-w-xl text-sm leading-6">
-            PlayGroundAI is an interface for watching ideas break, recover, and win in public.
-          </p>
-        </div>
-      </footer>
-    </div>
+        </motion.section>
+      </div>
+    </main>
   );
 }
