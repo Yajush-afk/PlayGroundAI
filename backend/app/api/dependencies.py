@@ -38,10 +38,10 @@ def get_debate_service() -> DebateService:
 def get_judge_service() -> JudgeService:
     settings = get_settings()
     repository = None
-    if settings.resolved_supabase_url and settings.resolved_supabase_key:
+    if settings.supabase_url and settings.supabase_service_role_key:
         repository = DebatesRepository(
-            supabase_url=settings.resolved_supabase_url,
-            supabase_key=settings.resolved_supabase_key,
+            supabase_url=settings.supabase_url,
+            supabase_key=settings.supabase_service_role_key,
             timeout_seconds=settings.request_timeout_seconds,
         )
 

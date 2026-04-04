@@ -1,41 +1,57 @@
 # PlayGroundAI
 
-PlayGroundAI is a Next.js frontend with a FastAPI backend for running multi-persona AI debates and judging them with a separate model.
+PlayGroundAI is split into two deployable parts:
 
-## Architecture
+- `frontend/` behavior lives in the repo root as a Next.js app
+- `backend/` contains the FastAPI API used by the frontend
 
-- Frontend: Next.js App Router
-- Backend: FastAPI
-- Debate generation: Groq streaming chat completions
-- Judging: Gemini 2.5 Flash
-- Persistence: Supabase (optional)
+## Repo Structure
 
-## Frontend Environment
+```text
+.
+├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   ├── core/
+│   │   ├── domain/
+│   │   ├── middleware/
+│   │   ├── providers/
+│   │   ├── repositories/
+│   │   └── services/
+│   ├── tests/
+│   ├── .env.example
+│   ├── environment.yml
+│   └── requirements.txt
+├── public/
+├── src/
+├── .github/workflows/render-keepalive.yml
+├── next.config.ts
+├── package.json
+└── render.yaml
+```
 
-Your existing `.env.local` stays in the repo root. The frontend now requires the FastAPI backend URL:
+## What Was Removed
+
+- The old Next.js API backend under `src/app/api/*`
+- The old TypeScript Supabase helper `src/lib/supabase.ts`
+
+There is no active TypeScript backend left. The only backend now is FastAPI under `backend/`.
+
+## Local Environment
+
+Frontend env in root `.env.local`:
 
 ```bash
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 NEXT_PUBLIC_MAX_DEBATE_ROUNDS=3
 ```
 
-Current frontend/provider values:
-
-```bash
-GROQ_API_KEY=
-GOOGLE_AI_API_KEY=
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-```
-
-## Backend Environment
-
-FastAPI reads from either:
+Backend env can live in either:
 
 - `backend/.env`
 - root `.env.local`
 
-Recommended backend env names are:
+Backend env values:
 
 ```bash
 GROQ_API_KEY=
@@ -57,86 +73,138 @@ ANONYMOUS_MAX_ACTIVE_DEBATES=1
 ACTIVE_DEBATE_TTL_SECONDS=3600
 ```
 
-For demo-only usage, the backend can still fall back to:
+Supabase is optional for demo deployment.
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+## Local Run
 
-but server-only Supabase credentials are strongly preferred.
-
-## Running The Demo
-
-### 1. Frontend
+Frontend:
 
 ```bash
 npm run dev
 ```
 
-### 2. Backend
-
-Use the requested conda environment:
+Backend:
 
 ```bash
 conda activate playground
 uvicorn app.main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
 ```
 
-### 3. Tests
+Backend tests:
 
 ```bash
 conda run -n playground pytest backend/tests
 ```
 
-## Render Keep-Alive
+## Deployment Roots
 
-The backend already exposes a lightweight public health endpoint:
+### Vercel
+
+- Root Directory: repo root `/`
+- Framework: Next.js
+
+### Render
+
+- Root Directory: `backend`
+- Environment: Python
+
+## Vercel Deployment Guide
+
+1. Import the repo into Vercel.
+2. Set the project root to `/`.
+3. Add env vars:
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=https://<your-render-service>.onrender.com
+NEXT_PUBLIC_MAX_DEBATE_ROUNDS=3
+```
+
+4. Deploy.
+
+## Render Deployment Guide
+
+You can deploy manually in the dashboard or use `render.yaml`.
+
+Manual settings:
+
+- Root Directory: `backend`
+- Build Command:
+
+```bash
+pip install -r requirements.txt
+```
+
+- Start Command:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Required env vars:
+
+```bash
+GROQ_API_KEY=...
+GOOGLE_AI_API_KEY=...
+ALLOWED_ORIGINS=https://<your-vercel-app>.vercel.app
+REQUEST_TIMEOUT_SECONDS=30
+STREAM_TIMEOUT_SECONDS=90
+JUDGE_TIMEOUT_SECONDS=45
+RATE_LIMIT_WINDOW_SECONDS=60
+RATE_LIMIT_MAX_REQUESTS=20
+ANONYMOUS_MAX_ROUNDS=3
+ANONYMOUS_DEBATE_WINDOW_SECONDS=1800
+ANONYMOUS_DEBATES_PER_WINDOW=2
+ANONYMOUS_DEBATES_PER_DAY=5
+ANONYMOUS_JUDGES_PER_DAY=5
+ANONYMOUS_MAX_ACTIVE_DEBATES=1
+ACTIVE_DEBATE_TTL_SECONDS=3600
+```
+
+Optional env vars:
+
+```bash
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+## Health Endpoint / Render Keep-Alive
+
+The backend already exposes:
 
 ```bash
 GET /health
 ```
 
-To keep a free-tier Render service warm, this repo now includes an external scheduler using GitHub Actions:
+Repo includes an external GitHub Actions scheduler:
 
-- Workflow file: `.github/workflows/render-keepalive.yml`
-- Schedule: every 5 minutes
-- Behavior: sends a simple GET request to your deployed Render `/health` URL
-- Retries: 3 retries with delay
+- `.github/workflows/render-keepalive.yml`
 
-### Setup
+Setup:
 
-1. Deploy the FastAPI backend on Render.
-2. Copy the public health URL:
+1. Deploy backend on Render.
+2. Copy:
 
 ```bash
 https://<your-render-service>.onrender.com/health
 ```
 
-3. In GitHub, open:
-   `Repo Settings -> Secrets and variables -> Actions`
-4. Add a repository secret named:
+3. Add GitHub Actions secret:
 
 ```bash
 RENDER_HEALTHCHECK_URL
 ```
 
-5. Set its value to your Render health URL.
+4. Set it to the health URL above.
 
-This keeps the ping external to Render and external to the browser, which is the right pattern for free-tier keep-alive.
+This pings every 5 minutes with retries and keeps the free Render service warmer.
 
-## Backend Files
+## Demo Status
 
-- `backend/app/main.py`
-- `backend/app/api/routes/debate.py`
-- `backend/app/api/routes/judge.py`
-- `backend/app/domain/`
-- `backend/app/providers/`
-- `backend/app/services/`
-- `backend/app/repositories/`
+Deployable now for demo use with:
 
-## Notes
+- Groq key
+- Gemini key
+- Vercel frontend
+- Render backend
 
-- The old Next.js API backend was removed.
-- The frontend now talks to FastAPI only.
-- The hardest compatibility point remains streaming SSE from `/api/debate`.
-- Supabase persistence is optional; the app still works without it.
-- Public demo protection is now controlled by the anonymous quota env values above.
+Supabase can be added later.

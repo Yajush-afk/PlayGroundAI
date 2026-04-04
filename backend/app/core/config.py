@@ -27,9 +27,6 @@ class Settings(BaseSettings):
 
     supabase_url: str | None = Field(default=None, validation_alias="SUPABASE_URL")
     supabase_service_role_key: str | None = Field(default=None, validation_alias="SUPABASE_SERVICE_ROLE_KEY")
-    supabase_anon_key: str | None = Field(default=None, validation_alias="SUPABASE_ANON_KEY")
-    next_public_supabase_url: str | None = Field(default=None, validation_alias="NEXT_PUBLIC_SUPABASE_URL")
-    next_public_supabase_anon_key: str | None = Field(default=None, validation_alias="NEXT_PUBLIC_SUPABASE_ANON_KEY")
 
     allowed_origins_raw: str = Field(
         default="http://localhost:3000,http://127.0.0.1:3000",
@@ -51,15 +48,6 @@ class Settings(BaseSettings):
     @property
     def allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.allowed_origins_raw.split(",") if origin.strip()]
-
-    @property
-    def resolved_supabase_url(self) -> str | None:
-        return self.supabase_url or self.next_public_supabase_url
-
-    @property
-    def resolved_supabase_key(self) -> str | None:
-        return self.supabase_service_role_key or self.supabase_anon_key or self.next_public_supabase_anon_key
-
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
