@@ -74,9 +74,9 @@ YOUR INSTRUCTIONS FOR THIS TURN:
 3. Do NOT repeat a point you or anyone else has already made. Build forward.
 4. If this is Round ${currentRound} of ${totalRounds} and you are past the halfway point, 
    begin steering toward a conclusion or your strongest thesis.
-5. Write 2-3 short, punchy paragraphs. No bullet points, no headers, no markdown.
+5. Write 1-2 short, punchy paragraphs. No bullet points, no headers, no markdown.
 6. Speak as your character naturally would — in full sentences, with conviction and personality.
-7. Stay under 200 words total.
+7. Stay under 100 words total.
 8. Do not break character. Do not refer to yourself as an AI.
 `;
 
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
         model: PERSONA_MODELS[persona] || "llama-3.3-70b-versatile",
         messages,
         temperature: 0.85,
-        max_tokens: 300,
+        max_tokens: 180,
         stream: true,
       }),
     });

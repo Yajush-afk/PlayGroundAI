@@ -298,87 +298,95 @@ export default function DebatesPage() {
       animate="show"
       variants={fadeUp}
       transition={{ duration: 0.55, ease: "easeOut" }}
-      className="grid gap-8 lg:grid-cols-[1fr_0.9fr]"
+      className="grid gap-8 lg:grid-cols-[1fr_0.85fr]"
     >
-      <div className="border-b border-white/8 pb-8 sm:pb-10 lg:border-b-0 lg:border-r lg:pr-10">
+      <div className="border-b border-white/8 pb-8 lg:border-b-0 lg:border-r lg:pr-10">
         <span className="section-kicker">Debate Arena</span>
-        <div className="mt-6 space-y-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-foreground/80">
-            <SquareTerminal className="h-5 w-5" />
-          </div>
-          <div className="space-y-4">
-            <h1 className="font-display text-5xl leading-[0.92] text-foreground sm:text-6xl">
-              Choose a topic and let the arena run.
-            </h1>
-            <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-              Four personas debate in sequence, their responses stream live, and Justice Nyay judges the full exchange when the final round is complete.
-            </p>
-          </div>
+        <div className="mt-4 space-y-5">
+          <h1 className="font-display text-3xl leading-tight text-foreground sm:text-4xl">
+            Choose a topic and let the arena run.
+          </h1>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center justify-between gap-4">
               <label className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-muted-foreground">Topic</label>
-              <span className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground">{topic.length}/200</span>
+              <span className={`font-mono text-[0.62rem] tabular-nums tracking-[0.18em] transition-colors ${
+                topic.length > 160 ? "text-orange-400" : "text-muted-foreground"
+              }`}>{topic.length}/200</span>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {PRESET_TOPICS.map((preset) => (
                 <button
                   key={preset}
                   onClick={() => setTopic(preset)}
-                  className="rounded-full border border-white/8 bg-white/5 px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
+                  className={`topic-pill text-xs py-1.5 px-3 ${topic === preset ? "active" : ""}`}
                 >
                   {preset}
                 </button>
               ))}
             </div>
 
-            <textarea
-              value={topic}
-              onChange={(event) => setTopic(event.target.value.slice(0, 200))}
-              placeholder="Should artificial intelligence be granted legal personhood rights?"
-              className="min-h-[140px] w-full border-y border-white/8 bg-transparent px-0 py-4 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-white/14"
-            />
+            <div className="relative rounded-xl border border-white/8 bg-white/[0.025] transition-colors focus-within:border-white/16">
+              <textarea
+                value={topic}
+                onChange={(event) => setTopic(event.target.value.slice(0, 200))}
+                placeholder="Should artificial intelligence be granted legal personhood rights?"
+                className="min-h-[90px] w-full resize-none bg-transparent px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/50"
+              />
+            </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-            <div className="space-y-3">
-              <label className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-muted-foreground">Rounds</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {[3, 5, 7].map((rounds) => (
-                    <button
-                      key={rounds}
-                      onClick={() => setTargetRounds(rounds as 3 | 5 | 7)}
-                      className={`border-b px-4 py-3 font-mono text-xs uppercase tracking-[0.16em] transition-all ${
-                        targetRounds === rounds
-                          ? "border-white/20 text-foreground"
-                          : "border-white/8 text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {rounds}
+          <div className="space-y-3">
+            {/* Rounds selector */}
+            <div className="space-y-1.5">
+              <label className="font-mono text-[0.58rem] uppercase tracking-[0.2em] text-muted-foreground">Rounds per side</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[3, 5, 7].map((rounds) => (
+                  <button
+                    key={rounds}
+                    onClick={() => setTargetRounds(rounds as 3 | 5 | 7)}
+                    className={`rounded-xl border py-2.5 font-mono text-xs tracking-[0.16em] transition-all ${
+                      targetRounds === rounds
+                        ? "border-violet-500/50 bg-violet-500/15 text-foreground"
+                        : "border-white/8 bg-white/[0.025] text-muted-foreground hover:text-foreground hover:border-white/14"
+                    }`}
+                  >
+                    {rounds}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center gap-3 border-b border-white/8 px-0 py-3">
-              <div>
-                <p className="font-mono text-[0.58rem] uppercase tracking-[0.18em] text-muted-foreground">Demo Mode</p>
+            {/* Demo mode toggle */}
+            <button
+              type="button"
+              onClick={() => setIsDemoMode((v) => !v)}
+              className={`group flex w-full items-center justify-between rounded-xl border px-4 py-3 transition-all duration-200 ${
+                isDemoMode
+                  ? "border-violet-500/30 bg-violet-500/8"
+                  : "border-white/8 bg-white/[0.025] hover:border-white/14"
+              }`}
+            >
+              <div className="text-left">
+                <p className={`font-mono text-[0.62rem] uppercase tracking-[0.2em] transition-colors ${isDemoMode ? "text-violet-300" : "text-muted-foreground"}`}>
+                  Demo Mode
+                </p>
+                <p className="mt-0.5 text-[0.68rem] leading-tight text-muted-foreground/70">
+                  Uses short mock responses for instant preview
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsDemoMode((value) => !value)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isDemoMode ? "bg-primary" : "bg-muted"}`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isDemoMode ? "translate-x-6" : "translate-x-1"}`} />
-              </button>
-            </div>
+              {/* Toggle pill */}
+              <div className={`relative ml-4 h-6 w-11 shrink-0 rounded-full transition-colors duration-300 ${isDemoMode ? "bg-violet-500" : "bg-white/10"}`}>
+                <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-all duration-300 ${isDemoMode ? "left-[calc(100%-1.25rem)]" : "left-1"}`} />
+              </div>
+            </button>
           </div>
 
           <button
             onClick={handleStart}
             disabled={!topic.trim()}
-            className="grain-button inline-flex w-full items-center justify-center gap-3 rounded-full bg-primary px-7 py-4 font-mono text-xs uppercase tracking-[0.2em] text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-primary w-full"
           >
             <Flame className="h-4 w-4" />
             Start Debate
@@ -386,251 +394,317 @@ export default function DebatesPage() {
         </div>
       </div>
 
-      <motion.div variants={fadeUp} transition={{ delay: 0.08, duration: 0.55 }} className="pt-2 lg:pl-2">
+      <motion.div variants={fadeUp} transition={{ delay: 0.08, duration: 0.55 }} className="pt-1 lg:pl-2">
         <span className="section-kicker">Cast</span>
-        <div className="mt-6 grid gap-0 sm:grid-cols-2 sm:divide-x sm:divide-white/8">
-          {PERSONA_ORDER.map((persona, index) => {
-            const config = PERSONA_CONFIG[persona];
-            return (
+        <div className="mt-4 flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            {PERSONA_ORDER.map((persona, index) => {
+              const config = PERSONA_CONFIG[persona];
+              const cardClass = `persona-card-${persona.toLowerCase()}`;
+              return (
+                <motion.div
+                  key={persona}
+                  initial={{ opacity: 0, x: 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 + index * 0.07, duration: 0.4, ease: "easeOut" }}
+                  className={`group/card relative flex items-center gap-3 rounded-xl border p-4 transition-all duration-300 ${cardClass}`}
+                  style={{ background: "rgba(255,255,255,0.025)" }}
+                >
+                  <div className={`h-12 w-12 shrink-0 overflow-hidden rounded-full ${config.bgLight} ring-1 ring-white/10`}>
+                    <Image src={config.avatar} alt={persona} width={48} height={48} className="h-full w-full object-cover" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`font-display text-xl leading-none ${config.color}`}>{persona}</p>
+                    <p className="mt-1 text-[0.65rem] leading-4 text-muted-foreground">{config.description}</p>
+                  </div>
+
+                  {/* Hover tooltip */}
+                  <div className="pointer-events-none absolute bottom-[calc(100%+0.5rem)] left-0 z-50 w-60 opacity-0 transition-all duration-200 group-hover/card:pointer-events-auto group-hover/card:opacity-100">
+                    <motion.div
+                      initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                      className="overflow-hidden rounded-2xl border border-white/10 bg-card/95 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+                    >
+                      <div className={`flex items-center gap-3 border-b border-white/8 px-4 py-3 ${config.bgLight}`}>
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full ring-1 ring-white/15">
+                          <Image src={config.avatar} alt={persona} width={40} height={40} className="h-full w-full object-cover" />
+                        </div>
+                        <div>
+                          <p className={`font-display text-xl leading-none ${config.color}`}>{persona}</p>
+                          <p className="mt-0.5 font-mono text-[0.5rem] uppercase tracking-[0.16em] text-muted-foreground">{config.description}</p>
+                        </div>
+                      </div>
+                      <div className="px-4 py-3">
+                        <p className="text-[0.72rem] leading-[1.6] text-foreground/75">{config.fullBio}</p>
+                        <p className="mt-2 font-mono text-[0.5rem] uppercase tracking-[0.16em] text-muted-foreground/60">{config.model}</p>
+                      </div>
+                    </motion.div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Judge Card */}
+          <motion.div
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 + PERSONA_ORDER.length * 0.07, duration: 0.4, ease: "easeOut" }}
+            className="group/card relative flex items-center gap-3 rounded-xl border border-yellow-500/10 p-4 transition-all duration-300 hover:border-yellow-500/30 hover:bg-yellow-500/[0.04]"
+            style={{ background: "rgba(255,255,255,0.025)" }}
+          >
+            <div className="flex h-12 w-12 shrink-0 overflow-hidden items-center justify-center rounded-full bg-yellow-500/10 ring-1 ring-yellow-500/20">
+              <Image src="/avatars/judge.png" alt="Justice Nyay" width={48} height={48} className="h-full w-full object-cover" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-display text-xl leading-none text-yellow-300">Justice Nyay</p>
+              <p className="mt-1 text-[0.65rem] leading-4 text-muted-foreground">Neutral Arbiter &amp; Verdict Judge</p>
+            </div>
+
+            {/* Judge Hover Tooltip */}
+            <div className="pointer-events-none absolute bottom-[calc(100%+0.5rem)] left-0 z-50 w-60 opacity-0 transition-all duration-200 group-hover/card:pointer-events-auto group-hover/card:opacity-100">
               <motion.div
-                key={persona}
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + index * 0.06, duration: 0.45, ease: "easeOut" }}
-                className={`border-b border-white/8 p-4 ${index >= 2 ? "sm:border-b-0" : ""}`}
+                initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                className="overflow-hidden rounded-2xl border border-white/10 bg-card/95 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl"
               >
-                <div className="flex items-start gap-4">
-                  <div className={`h-14 w-14 overflow-hidden rounded-full ${config.bgLight}`}>
-                    <Image src={config.avatar} alt={persona} width={56} height={56} className="h-full w-full object-cover" />
+                <div className="flex items-center gap-3 border-b border-yellow-500/20 bg-yellow-500/10 px-4 py-3">
+                  <div className="flex h-10 w-10 shrink-0 overflow-hidden items-center justify-center rounded-full bg-yellow-500/20 ring-1 ring-yellow-500/30">
+                    <Image src="/avatars/judge.png" alt="Justice Nyay" width={40} height={40} className="h-full w-full object-cover" />
                   </div>
                   <div>
-                    <p className={`font-display text-3xl ${config.color}`}>{persona}</p>
-                    <p className="font-mono text-[0.58rem] uppercase tracking-[0.18em] text-muted-foreground">{config.model}</p>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{config.description}</p>
+                    <p className="font-display text-xl leading-none text-yellow-300">Justice Nyay</p>
+                    <p className="mt-0.5 font-mono text-[0.5rem] uppercase tracking-[0.16em] text-yellow-500/70">Impartial Judge</p>
                   </div>
                 </div>
+                <div className="px-4 py-3">
+                  <p className="text-[0.72rem] leading-[1.6] text-foreground/75">Evaluates all arguments fairly without political or ideological bias. Scores participants strictly on logic, clarity, evidence, and direct engagement.</p>
+                  <p className="mt-2 font-mono text-[0.5rem] uppercase tracking-[0.16em] text-muted-foreground/60">gemini-2.5-flash</p>
+                </div>
               </motion.div>
-            );
-          })}
+            </div>
+          </motion.div>
         </div>
       </motion.div>
     </motion.section>
   );
 
   const renderArena = () => (
-    <div className="space-y-6">
+    <div className="flex min-h-[calc(100svh-5rem)] flex-col">
+      {/* Header */}
       <motion.section
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="border-b border-white/8 px-0 py-5 sm:py-6"
+        className="border-b border-white/8 px-0 py-4"
       >
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="section-kicker">Active Debate</span>
-              <div className="rounded-full border border-white/8 bg-white/5 px-3 py-1.5 font-mono text-[0.58rem] uppercase tracking-[0.18em] text-muted-foreground">
-                {status === "awaiting_judge"
-                  ? "Awaiting Judge"
-                  : status === "finished"
-                    ? "Transcript Complete"
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Left — topic + round nav */}
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              {status === "debating" && !hasTurnError ? (
+                <div className="live-badge">Live</div>
+              ) : status === "awaiting_judge" ? (
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/40 bg-blue-500/15 px-3 py-1 font-mono text-[0.56rem] uppercase tracking-[0.18em] text-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.25)]">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" />
+                  Debate Complete
+                </div>
+              ) : (
+                <div className="status-badge">
+                  {status === "finished"
+                    ? "Transcript Ready"
                     : hasTurnError
-                      ? `${activePersonaName} needs retry`
+                      ? "Turn Failed"
                       : `${activePersonaName} speaking`}
-              </div>
+                </div>
+              )}
             </div>
-            <div className="space-y-3">
-              <div className="inline-flex items-center rounded-full border border-white/8 bg-white/5 p-1">
-                <button
-                  onClick={() => setViewRound((value) => Math.max(1, value - 1))}
-                  disabled={viewRound === 1}
-                  className="rounded-full px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
-                >
-                  Prev
-                </button>
-                <span className="rounded-full bg-white/8 px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-foreground">
-                  Round {viewRound}/{targetRounds}
-                </span>
-                <button
-                  onClick={() => setViewRound((value) => Math.min(targetRounds, value + 1))}
-                  disabled={viewRound === targetRounds || (viewRound >= currentRound && status !== "finished" && status !== "results")}
-                  className="rounded-full px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
-                >
-                  Next
-                </button>
-              </div>
-              <h1 className="font-display text-4xl leading-tight text-foreground sm:text-5xl">{topic}</h1>
+
+            <div className="inline-flex items-center rounded-full border border-white/8 bg-white/[0.03] p-0.5">
+              <button
+                onClick={() => setViewRound((v) => Math.max(1, v - 1))}
+                disabled={viewRound === 1}
+                className="rounded-full px-3 py-1.5 font-mono text-[0.58rem] uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
+              >
+                ← Prev
+              </button>
+              <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 font-mono text-[0.58rem] tracking-[0.18em] text-foreground">
+                Round {viewRound} / {targetRounds}
+              </span>
+              <button
+                onClick={() => setViewRound((v) => Math.min(targetRounds, v + 1))}
+                disabled={viewRound === targetRounds || (viewRound >= currentRound && status !== "finished" && status !== "results")}
+                className="rounded-full px-3 py-1.5 font-mono text-[0.58rem] uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
+              >
+                Next →
+              </button>
             </div>
+
+            <p className="hidden max-w-sm truncate font-mono text-[0.62rem] uppercase tracking-[0.14em] text-muted-foreground/70 sm:block">{topic}</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {status === "finished" ? (
+          {/* Right — actions */}
+          <div className="flex items-center gap-2">
+            {status === "awaiting_judge" && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                onClick={() => runJudgeModel(history)}
+                className="inline-flex items-center gap-2 rounded-full border border-yellow-500/40 bg-gradient-to-r from-yellow-600/30 to-amber-500/30 px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-yellow-200 shadow-[0_0_14px_rgba(202,138,4,0.3)] transition-all hover:border-yellow-400/60 hover:from-yellow-600/45 hover:to-amber-500/45 hover:text-yellow-100"
+              >
+                <Scale className="h-3.5 w-3.5" />
+                Send to Judge
+              </motion.button>
+            )}
+            {(status === "finished") && (
               <button
                 onClick={() => setStatus("results")}
-                className="rounded-full border border-white/8 bg-white/5 px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-foreground transition-colors hover:bg-white/8"
+                className="btn-primary py-2 px-4 text-[0.62rem]"
               >
+                <Scale className="h-3.5 w-3.5" />
                 View Verdict
               </button>
-            ) : null}
-            <button
-              onClick={handleRestart}
-              className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/5 px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
-            >
+            )}
+            {hasTurnError && (
+              <button
+                onClick={retryCurrentTurn}
+                className="btn-ghost border-destructive/40 bg-destructive/10 text-destructive-foreground hover:bg-destructive/20 py-2 px-4 text-[0.62rem]"
+              >
+                Retry Turn
+              </button>
+            )}
+            <button onClick={handleRestart} className="btn-ghost py-2 px-3 text-[0.62rem]">
               <RotateCcw className="h-3.5 w-3.5" />
               Restart
             </button>
-            <button
-              onClick={handleNewDebate}
-              className="rounded-full border border-white/8 bg-white/5 px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
-            >
+            <button onClick={handleNewDebate} className="btn-ghost py-2 px-3 text-[0.62rem]">
               New Topic
             </button>
           </div>
         </div>
       </motion.section>
 
-      <section className="overflow-hidden border-y border-white/8 lg:grid lg:grid-cols-2 lg:divide-x lg:divide-white/8">
+      {/* Persona Grid — fills remaining height */}
+      <section className="flex-1 overflow-hidden lg:grid lg:grid-cols-2 lg:divide-x lg:divide-white/8">
         {PERSONA_ORDER.map((persona, index) => {
           const config = PERSONA_CONFIG[persona];
-          const roundEntry = history.find((entry) => entry.persona === persona && entry.round === viewRound);
+          const roundEntry = history.find((e) => e.persona === persona && e.round === viewRound);
           const isTurn = status === "debating" && activePersonaName === persona;
           const isCurrentTurnViewing = isTurn && currentRound === viewRound;
 
           return (
             <motion.article
               key={persona}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0, scale: isTurn ? 1.01 : 1 }}
-              transition={{ delay: index * 0.05, duration: 0.35, ease: "easeOut" }}
-              className={`min-h-[300px] border-b border-white/8 p-5 sm:p-6 lg:border-b-0 ${isTurn ? `bg-white/[0.03]` : ""}`}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0, scale: isTurn ? 1.002 : 1 }}
+              transition={{ delay: index * 0.04, duration: 0.3, ease: "easeOut" }}
+              className={`flex flex-col border-b border-white/8 lg:border-b-0 transition-all duration-300 ${
+                isTurn ? `bg-white/[0.03] persona-card-${persona.toLowerCase()} active` : ""
+              }`}
             >
-              <div className="flex h-full flex-col">
-                <div className="flex items-start justify-between gap-4 border-b border-white/6 pb-5">
-                  <div className="flex items-start gap-4">
-                    <div className={`h-14 w-14 overflow-hidden rounded-full ${config.bgLight}`}>
-                      <Image src={config.avatar} alt={persona} width={56} height={56} className="h-full w-full object-cover" />
-                    </div>
-                    <div>
-                      <p className={`font-display text-3xl ${config.color}`}>{persona}</p>
-                      <p className="font-mono text-[0.58rem] uppercase tracking-[0.18em] text-muted-foreground">{config.model}</p>
-                    </div>
+              {/* Card header — hover for persona tooltip */}
+              <div className="group/card relative flex items-center justify-between gap-3 border-b border-white/6 px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                  <div className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-full ${config.bgLight} ring-1 ring-white/10`}>
+                    <Image src={config.avatar} alt={persona} width={48} height={48} className="h-full w-full object-cover" />
                   </div>
-                  <div className="rounded-full border border-white/8 bg-white/5 px-3 py-1.5 font-mono text-[0.58rem] uppercase tracking-[0.18em] text-muted-foreground">
-                    {isTurn ? "Live" : `Round ${viewRound}`}
+                  <div>
+                    <p className={`font-display text-2xl leading-none ${config.color}`}>{persona}</p>
+                    <p className="mt-0.5 font-mono text-[0.52rem] uppercase tracking-[0.18em] text-muted-foreground">{config.description}</p>
                   </div>
                 </div>
+                {isTurn ? (
+                  <div className="live-badge">Live</div>
+                ) : (
+                  <div className="status-badge">R{viewRound}</div>
+                )}
 
-                <div className="mt-5 flex-1 overflow-y-auto pr-1">
-                  <AnimatePresence mode="wait">
-                    {!roundEntry && !isCurrentTurnViewing ? (
-                      <motion.div
-                        key="empty"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="flex h-full min-h-[170px] items-center justify-center px-0 text-center text-sm leading-7 text-muted-foreground"
-                      >
-                        Waiting for {persona} in Round {viewRound}.
-                      </motion.div>
-                    ) : null}
-
-                    {roundEntry ? (
-                      <motion.div
-                        key={`history-${persona}-${viewRound}`}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -12 }}
-                        className="px-0 py-1 text-sm leading-7 text-foreground/88"
-                      >
-                        {roundEntry.text}
-                      </motion.div>
-                    ) : null}
-
-                    {isCurrentTurnViewing && !hasTurnError ? (
-                      <motion.div
-                        key={`stream-${persona}-${viewRound}`}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -12 }}
-                        className="mt-4 border-t border-white/8 px-0 pt-4 text-sm leading-7 text-foreground/88"
-                      >
-                        {streamingText}
-                        <span className="ml-2 inline-block h-4 w-1.5 animate-blink rounded-full bg-foreground/70 align-middle" />
-                      </motion.div>
-                    ) : null}
-
-                    {isCurrentTurnViewing && hasTurnError ? (
-                      <motion.div
-                        key={`error-${persona}-${viewRound}`}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -12 }}
-                        className="mt-4 border-t border-destructive/25 bg-destructive/10 px-4 py-5"
-                      >
-                        <p className="font-display text-3xl text-destructive">Turn failed</p>
-                        <p className="mt-2 text-sm leading-7 text-destructive/85">
-                          Retry this round and keep the rest of the transcript intact.
-                        </p>
-                        <button
-                          onClick={retryCurrentTurn}
-                          className="mt-4 rounded-full border border-destructive/40 bg-destructive px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-destructive-foreground transition-colors hover:bg-destructive/90"
-                        >
-                          Retry Turn
-                        </button>
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
+                {/* Hover tooltip — fixed size for all personas */}
+                <div className="pointer-events-none absolute bottom-[calc(100%+0.5rem)] left-3 z-50 w-60 opacity-0 transition-all duration-200 group-hover/card:pointer-events-auto group-hover/card:opacity-100">
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                    whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                    className="overflow-hidden rounded-2xl border border-white/10 bg-card/95 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+                  >
+                    {/* Tooltip header */}
+                    <div className={`flex items-center gap-3 border-b border-white/8 px-4 py-3 ${config.bgLight}`}>
+                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full ring-1 ring-white/15">
+                        <Image src={config.avatar} alt={persona} width={40} height={40} className="h-full w-full object-cover" />
+                      </div>
+                      <div>
+                        <p className={`font-display text-xl leading-none ${config.color}`}>{persona}</p>
+                        <p className="mt-0.5 font-mono text-[0.5rem] uppercase tracking-[0.16em] text-muted-foreground">{config.description}</p>
+                      </div>
+                    </div>
+                    {/* Tooltip body */}
+                    <div className="px-4 py-3">
+                      <p className="text-[0.72rem] leading-[1.6] text-foreground/75">{config.fullBio}</p>
+                      <p className="mt-2 font-mono text-[0.5rem] uppercase tracking-[0.16em] text-muted-foreground/60">{config.model}</p>
+                    </div>
+                  </motion.div>
                 </div>
+              </div>
+
+              {/* Card body — scrollable, capped height */}
+              <div className="flex-1 overflow-y-auto px-4 py-3" style={{ maxHeight: "calc((100svh - 12rem) / 2)" }}>
+                <AnimatePresence mode="wait">
+                  {!roundEntry && !isCurrentTurnViewing ? (
+                    <motion.p
+                      key="empty"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex h-20 items-center justify-center text-[0.72rem] leading-6 text-muted-foreground/60"
+                    >
+                      Waiting for {persona} in Round {viewRound}.
+                    </motion.p>
+                  ) : null}
+
+                  {roundEntry ? (
+                    <motion.p
+                      key={`history-${persona}-${viewRound}`}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="text-[0.8rem] leading-6 text-foreground/85"
+                    >
+                      {roundEntry.text}
+                    </motion.p>
+                  ) : null}
+
+                  {isCurrentTurnViewing && !hasTurnError ? (
+                    <motion.p
+                      key={`stream-${persona}-${viewRound}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-[0.8rem] leading-6 text-foreground/85"
+                    >
+                      {streamingText}
+                      <span className="ml-1 inline-block h-3.5 w-1 animate-blink rounded-full bg-foreground/70 align-middle" />
+                    </motion.p>
+                  ) : null}
+
+                  {isCurrentTurnViewing && hasTurnError ? (
+                    <motion.div
+                      key={`error-${persona}-${viewRound}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="rounded-xl border border-destructive/25 bg-destructive/8 px-4 py-4"
+                    >
+                      <p className="text-sm font-medium text-destructive">Turn failed — retry to continue.</p>
+                      <button
+                        onClick={retryCurrentTurn}
+                        className="mt-3 rounded-full border border-destructive/40 bg-destructive px-4 py-2 font-mono text-[0.58rem] uppercase tracking-[0.18em] text-white transition-colors hover:bg-destructive/90"
+                      >
+                        Retry
+                      </button>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
               </div>
             </motion.article>
           );
         })}
       </section>
-
-      <AnimatePresence>
-        {status === "awaiting_judge" || hasTurnError ? (
-          <motion.section
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 18 }}
-            className="border-t border-white/8 px-0 py-5 sm:py-6"
-          >
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-foreground/80">
-                  {hasTurnError ? <Sparkles className="h-5 w-5" /> : <Trophy className="h-5 w-5" />}
-                </div>
-                <div>
-                  <p className="font-display text-3xl text-foreground">
-                    {hasTurnError ? "One turn needs a retry." : "The transcript is ready for judgment."}
-                  </p>
-                  <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                    {hasTurnError
-                      ? "Use retry to continue the failed turn without discarding finished rounds."
-                      : "Send the completed debate to Justice Nyay for the final score and verdict."}
-                  </p>
-                </div>
-              </div>
-
-              {hasTurnError ? (
-                <button
-                  onClick={retryCurrentTurn}
-                  className="rounded-full border border-destructive/40 bg-destructive px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-destructive-foreground transition-colors hover:bg-destructive/90"
-                >
-                  Retry Current Turn
-                </button>
-              ) : (
-                <button
-                  onClick={() => runJudgeModel(history)}
-                  className="grain-button inline-flex items-center gap-3 rounded-full bg-primary px-6 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5"
-                >
-                  Send To Judge
-                  <Scale className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </motion.section>
-        ) : null}
-      </AnimatePresence>
     </div>
   );
 
@@ -645,13 +719,13 @@ export default function DebatesPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setStatus("finished")}
-              className="rounded-full border border-white/8 bg-white/5 px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
+              className="btn-ghost"
             >
               View Debate
             </button>
             <button
               onClick={handleNewDebate}
-              className="rounded-full border border-white/8 bg-white/5 px-5 py-3 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
+              className="btn-primary py-2.5 px-5 text-[0.62rem]"
             >
               New Debate
             </button>
@@ -664,8 +738,8 @@ export default function DebatesPage() {
   );
 
   return (
-    <main className="px-4 pb-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+    <main className={`px-4 sm:px-6 lg:px-8 ${status === "setup" ? "flex min-h-[calc(100svh-5rem)] items-center pb-4" : "pb-10"}`}>
+      <div className="mx-auto w-full max-w-7xl">
         <AnimatePresence mode="wait">
           {status === "setup" ? (
             <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

@@ -8,11 +8,11 @@ function cn(...inputs: ClassValue[]) {
 
 export type Persona = "Aria" | "Lex" | "Sage" | "Rex";
 
-export const PERSONA_CONFIG: Record<Persona, { color: string; bgLight: string; ring: string; model: string; description: string; animation: string; avatar: string }> = {
-  Aria: { color: "text-purple-400", bgLight: "bg-purple-500/10", ring: "ring-purple-500/50", model: "llama-3.3-70b-versatile", description: "Progressive Idealist", animation: "animate-float", avatar: "/avatars/aria.png" },
-  Lex: { color: "text-blue-400", bgLight: "bg-blue-500/10", ring: "ring-blue-500/50", model: "llama-3.1-8b-instant", description: "Data-driven Libertarian", animation: "animate-breath", avatar: "/avatars/lex.png" },
-  Sage: { color: "text-green-400", bgLight: "bg-green-500/10", ring: "ring-green-500/50", model: "llama-3.1-8b-instant", description: "Neutral Philosopher", animation: "animate-sway", avatar: "/avatars/sage.png" },
-  Rex: { color: "text-red-400", bgLight: "bg-red-500/10", ring: "ring-red-500/50", model: "llama-3.1-8b-instant", description: "Traditionalist", animation: "animate-pulse", avatar: "/avatars/rex.png" },
+export const PERSONA_CONFIG: Record<Persona, { color: string; bgLight: string; ring: string; model: string; description: string; fullBio: string; animation: string; avatar: string }> = {
+  Aria: { color: "text-purple-400", bgLight: "bg-purple-500/10", ring: "ring-purple-500/50", model: "llama-3.3-70b-versatile", description: "Progressive Idealist", fullBio: "Argues from social equity and collective good. Warm but firm — she cites lived experiences and data on inequality, and owns the emotion in her case.", animation: "animate-float", avatar: "/avatars/aria.png" },
+  Lex: { color: "text-blue-400", bgLight: "bg-blue-500/10", ring: "ring-blue-500/50", model: "llama-3.1-8b-instant", description: "Data-driven Libertarian", fullBio: "Individual liberty first, always. Ruthlessly logical, quotes economic data and historical precedents. Blunt, never rude — he dismantles arguments by name.", animation: "animate-breath", avatar: "/avatars/lex.png" },
+  Sage: { color: "text-green-400", bgLight: "bg-green-500/10", ring: "ring-green-500/50", model: "llama-3.1-8b-instant", description: "Neutral Philosopher", fullBio: "Belongs to no camp. Follows logic wherever it leads, exposes contradictions in all sides equally. Asks the questions no one else dares to ask.", animation: "animate-sway", avatar: "/avatars/sage.png" },
+  Rex: { color: "text-red-400", bgLight: "bg-red-500/10", ring: "ring-red-500/50", model: "llama-3.1-8b-instant", description: "Traditionalist", fullBio: "Stability and proven systems above all. Draws from history, community values, and moral continuity. Unapologetic — change must be earned, not assumed.", animation: "animate-pulse", avatar: "/avatars/rex.png" },
 };
 
 interface PersonaCardProps {

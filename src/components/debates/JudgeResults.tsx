@@ -142,8 +142,8 @@ export function JudgeResults({ scores, status, onRetry }: JudgeResultsProps) {
               <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-muted-foreground">Final Verdict</p>
               <h2 className="mt-3 font-display text-5xl text-foreground">Justice Nyay</h2>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-foreground/80">
-              <Scale className="h-5 w-5" />
+            <div className="flex h-12 w-12 overflow-hidden items-center justify-center rounded-full bg-yellow-500/10 ring-1 ring-yellow-500/20">
+              <Image src="/avatars/judge.png" alt="Justice Nyay" width={48} height={48} className="h-full w-full object-cover" />
             </div>
           </div>
 

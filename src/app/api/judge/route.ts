@@ -51,8 +51,7 @@ IMPORTANT FAIRNESS RULES:
 - A participant who made 2 excellent points beats one who made 5 mediocre ones.
 
 SUMMARY INSTRUCTIONS:
-Write a 4-5 sentence summary that:
-- Identifies the strongest moment of the debate
+Write a 2-3 sentence summary that:
 - Names the winner and explains specifically why they won
 - Acknowledges the strongest point made by the runner-up
 - Is completely neutral in tone — do not editorialize on the topic itself
@@ -60,10 +59,10 @@ Write a 4-5 sentence summary that:
 Return ONLY a valid JSON object. No markdown, no explanation, no text outside the JSON:
 
 {
-  "summary": "<4-5 sentence neutral summary>",
+  "summary": "<2-3 sentence neutral summary>",
   "winner": "<Aria | Lex | Sage | Rex>",
-  "strongestMoment": "<one sentence describing the single best argument made in the debate>",
-  "conclusion": "The conclusion based on the discussion by Aria, Lex, Sage and Rex is that <1-2 sentence synthesis of what the collective arguments across all rounds reveal as the emergent truth or outcome of this debate>.",
+  "strongestMoment": "<one concise sentence describing the single best argument made>",
+  "conclusion": "The collective debate reveals that <1 sentence synthesis of the emergent truth or outcome>.",
   "evaluations": [
     {
       "persona": "Aria",

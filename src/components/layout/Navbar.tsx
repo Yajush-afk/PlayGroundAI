@@ -62,7 +62,7 @@ export function Navbar() {
 
         <Link
           href="/debates"
-          className="hidden items-center gap-2 rounded-full bg-primary px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.2em] text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5 lg:flex"
+          className="btn-primary hidden py-2.5 px-5 text-[0.62rem] lg:inline-flex"
         >
           Enter Arena
           <ArrowUpRight className="h-3.5 w-3.5" />
