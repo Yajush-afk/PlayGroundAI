@@ -1,4 +1,4 @@
-name: playground-backend
+name: playground
 channels:
   - conda-forge
 dependencies:

@@ -7,7 +7,7 @@ from app.api.dependencies import get_debate_service, get_usage_service, resolve_
 from app.domain.schemas import DebateTurnRequest, ErrorResponse
 from app.providers.base import ProviderAuthError, ProviderRateLimitError, ProviderResponseError, ProviderTimeoutError
 from app.services.debate_service import DebateService
-from app.services.usage_service import SessionUsageService, UsagePolicyError
+from app.services.usage_service import DebateUsageReservation, SessionUsageService, UsagePolicyError
 
 router = APIRouter(prefix="/api", tags=["debate"])
 
@@ -28,7 +28,7 @@ async def debate_turn(
         raise HTTPException(status_code=400, detail="Missing x-playground-debate-id header")
 
     try:
-        await usage_service.enforce_debate_policy(
+        reservation = await usage_service.reserve_debate_policy(
             session_id=resolve_session_id(request),
             debate_id=debate_id,
             payload=payload,
@@ -39,23 +39,33 @@ async def debate_turn(
     try:
         stream_handle = await service.start_turn_stream(payload)
     except ProviderAuthError as exc:
+        await usage_service.finalize_debate_policy(reservation, success=False)
         raise HTTPException(status_code=401, detail=str(exc)) from exc
     except ProviderRateLimitError as exc:
+        await usage_service.finalize_debate_policy(reservation, success=False)
         raise HTTPException(status_code=429, detail=str(exc)) from exc
     except ProviderTimeoutError as exc:
+        await usage_service.finalize_debate_policy(reservation, success=False)
         raise HTTPException(status_code=504, detail=str(exc)) from exc
     except ProviderResponseError as exc:
+        await usage_service.finalize_debate_policy(reservation, success=False)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception:
+        await usage_service.finalize_debate_policy(reservation, success=False)
+        raise
 
-    async def iterator():
+    async def iterator(active_reservation: DebateUsageReservation):
+        stream_succeeded = False
         try:
             async for chunk in stream_handle.aiter_bytes():
                 yield chunk
+            stream_succeeded = True
         finally:
             await stream_handle.aclose()
+            await usage_service.finalize_debate_policy(active_reservation, success=stream_succeeded)
 
     return StreamingResponse(
-        iterator(),
+        iterator(reservation),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

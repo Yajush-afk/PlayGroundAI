@@ -35,7 +35,7 @@ async def judge_debate(
         raise HTTPException(status_code=400, detail="Missing x-playground-debate-id header")
 
     try:
-        await usage_service.enforce_judge_policy(
+        reservation = await usage_service.reserve_judge_policy(
             session_id=resolve_session_id(request),
             debate_id=debate_id,
             payload=payload,
@@ -46,12 +46,20 @@ async def judge_debate(
     try:
         result = await service.judge_debate(payload)
     except ProviderAuthError as exc:
+        await usage_service.finalize_judge_policy(reservation, success=False)
         raise HTTPException(status_code=401, detail=str(exc)) from exc
     except ProviderRateLimitError as exc:
+        await usage_service.finalize_judge_policy(reservation, success=False)
         raise HTTPException(status_code=429, detail=str(exc)) from exc
     except ProviderTimeoutError as exc:
+        await usage_service.finalize_judge_policy(reservation, success=False)
         raise HTTPException(status_code=504, detail=str(exc)) from exc
     except (ProviderResponseError, ProviderValidationError) as exc:
+        await usage_service.finalize_judge_policy(reservation, success=False)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception:
+        await usage_service.finalize_judge_policy(reservation, success=False)
+        raise
 
+    await usage_service.finalize_judge_policy(reservation, success=True)
     return result.model_dump(by_alias=True)

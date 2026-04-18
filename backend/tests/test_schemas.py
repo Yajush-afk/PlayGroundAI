@@ -1,6 +1,6 @@
 from pydantic import ValidationError
 
-from app.domain.schemas import DebateTurnRequest, JudgeScoresResponse
+from app.domain.schemas import DebateTurnRequest, ErrorResponse, JudgeScoresResponse
 
 
 def test_debate_turn_request_accepts_valid_payload() -> None:
@@ -124,3 +124,8 @@ def test_judge_scores_response_rejects_invalid_winner() -> None:
         assert True
     else:
         assert False, "JudgeScoresResponse should reject invalid winner values"
+
+
+def test_error_response_uses_fastapi_detail_shape() -> None:
+    payload = ErrorResponse.model_validate({"detail": "Rate limit exceeded"})
+    assert payload.detail == "Rate limit exceeded"

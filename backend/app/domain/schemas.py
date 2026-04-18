@@ -80,4 +80,4 @@ class DebateRecordCreate(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    error: str
+    detail: str

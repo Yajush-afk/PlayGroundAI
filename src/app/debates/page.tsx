@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import { Flame, RotateCcw, Scale } from "lucide-react";
@@ -53,6 +53,9 @@ export default function DebatesPage() {
 
   const [judgeStatus, setJudgeStatus] = useState<"idle" | "evaluating" | "done" | "error">("idle");
   const [judgeScores, setJudgeScores] = useState<JudgeScores | null>(null);
+  const activeRunRef = useRef(0);
+  const debateAbortRef = useRef<AbortController | null>(null);
+  const judgeAbortRef = useRef<AbortController | null>(null);
 
   const activePersonaName = PERSONA_ORDER[activePersonaIdx];
 
@@ -81,24 +84,51 @@ export default function DebatesPage() {
     "X-Playground-Debate-Id": debateId,
   });
 
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const abortInFlightRequests = () => {
+    debateAbortRef.current?.abort();
+    debateAbortRef.current = null;
+    judgeAbortRef.current?.abort();
+    judgeAbortRef.current = null;
+  };
+
+  const beginRun = () => {
+    activeRunRef.current += 1;
+    abortInFlightRequests();
+    return activeRunRef.current;
+  };
+
+  const isRunCurrent = (runToken: number) => activeRunRef.current === runToken;
+
+  useEffect(() => {
+    return () => {
+      activeRunRef.current += 1;
+      abortInFlightRequests();
+    };
+  }, []);
+
   const handleStart = () => {
     if (!topic.trim()) return;
     const debateId = createDebateId();
+    const runToken = beginRun();
     resetForNewRun();
     setCurrentDebateId(debateId);
     setStatus("debating");
-    startNextTurn(1, 0, [], debateId);
+    void startNextTurn(1, 0, [], debateId, runToken);
   };
 
   const handleRestart = () => {
     const debateId = createDebateId();
+    const runToken = beginRun();
     resetForNewRun();
     setCurrentDebateId(debateId);
     setStatus("debating");
-    startNextTurn(1, 0, [], debateId);
+    void startNextTurn(1, 0, [], debateId, runToken);
   };
 
   const handleNewDebate = () => {
+    beginRun();
     setTopic("");
     resetForNewRun();
     setTargetRounds(DEFAULT_ROUNDS);
@@ -108,26 +138,37 @@ export default function DebatesPage() {
 
   const retryCurrentTurn = () => {
     const debateId = currentDebateId ?? createDebateId();
+    const runToken = beginRun();
     setCurrentDebateId(debateId);
     setStatus("debating");
-    startNextTurn(currentRound, activePersonaIdx, history, debateId);
+    void startNextTurn(currentRound, activePersonaIdx, history, debateId, runToken);
   };
 
-  const startNextTurn = async (round: number, pIdx: number, currentHistory: ResponseLog[], debateId: string) => {
+  const startNextTurn = async (round: number, pIdx: number, currentHistory: ResponseLog[], debateId: string, runToken: number) => {
+    if (!isRunCurrent(runToken)) {
+      return;
+    }
+
     const persona = PERSONA_ORDER[pIdx];
     setStreamingText("");
     setHasTurnError(false);
-
-    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
     if (isDemoMode) {
       const demoResponse = `As ${persona}, I firmly believe that regarding "${topic}", we must deeply consider the ideological implications.\n\nFrom my perspective as the ${PERSONA_CONFIG[persona].description}, the evidence clearly shows that we must be meticulous about our approach here. This is a highly simulated response generated completely locally to test the UI without hitting any Groq or Gemini API keys.`;
 
       let currentText = "";
       for (let i = 1; i <= demoResponse.length; i += 4) {
+        if (!isRunCurrent(runToken)) {
+          return;
+        }
+
         currentText = demoResponse.slice(0, i);
         setStreamingText(currentText);
         await sleep(20);
+      }
+
+      if (!isRunCurrent(runToken)) {
+        return;
       }
 
       const newHistory = [...currentHistory, { persona, text: demoResponse, round }];
@@ -137,7 +178,7 @@ export default function DebatesPage() {
       const nextIdx = pIdx + 1;
       if (nextIdx < PERSONA_ORDER.length) {
         setActivePersonaIdx(nextIdx);
-        startNextTurn(round, nextIdx, newHistory, debateId);
+        void startNextTurn(round, nextIdx, newHistory, debateId, runToken);
         return;
       }
 
@@ -146,7 +187,7 @@ export default function DebatesPage() {
         setCurrentRound(nextRound);
         setViewRound(nextRound);
         setActivePersonaIdx(0);
-        startNextTurn(nextRound, 0, newHistory, debateId);
+        void startNextTurn(nextRound, 0, newHistory, debateId, runToken);
         return;
       }
 
@@ -154,25 +195,12 @@ export default function DebatesPage() {
       return;
     }
 
+    const controller = new AbortController();
+    debateAbortRef.current = controller;
+
     try {
-      let res = await fetch(apiUrl("/api/debate"), {
-        method: "POST",
-        headers: buildRequestHeaders(debateId),
-        body: JSON.stringify({
-          topic,
-          persona,
-          currentRound: round,
-          totalRounds: targetRounds,
-          history: currentHistory,
-        }),
-      });
-
-      const MAX_RETRIES = 3;
-      const BACKOFF_MS = [12000, 20000, 30000];
-
-      for (let attempt = 0; attempt < MAX_RETRIES && res.status === 429; attempt++) {
-        await sleep(BACKOFF_MS[attempt]);
-        res = await fetch(apiUrl("/api/debate"), {
+      const sendTurnRequest = () =>
+        fetch(apiUrl("/api/debate"), {
           method: "POST",
           headers: buildRequestHeaders(debateId),
           body: JSON.stringify({
@@ -182,7 +210,25 @@ export default function DebatesPage() {
             totalRounds: targetRounds,
             history: currentHistory,
           }),
+          signal: controller.signal,
         });
+
+      let res = await sendTurnRequest();
+
+      const MAX_RETRIES = 3;
+      const BACKOFF_MS = [12000, 20000, 30000];
+
+      for (let attempt = 0; attempt < MAX_RETRIES && res.status === 429; attempt++) {
+        if (!isRunCurrent(runToken)) {
+          return;
+        }
+
+        await sleep(BACKOFF_MS[attempt]);
+        if (!isRunCurrent(runToken)) {
+          return;
+        }
+
+        res = await sendTurnRequest();
       }
 
       if (!res.ok) {
@@ -201,6 +247,10 @@ export default function DebatesPage() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        if (!isRunCurrent(runToken)) {
+          await reader.cancel();
+          return;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
@@ -216,12 +266,18 @@ export default function DebatesPage() {
             const data = JSON.parse(dataStr);
             if (data.choices?.[0]?.delta?.content) {
               fullResponse += data.choices[0].delta.content;
-              setStreamingText(fullResponse);
+              if (isRunCurrent(runToken)) {
+                setStreamingText(fullResponse);
+              }
             }
           } catch (error) {
             console.error("Stream parse error:", error, line);
           }
         }
+      }
+
+      if (!isRunCurrent(runToken)) {
+        return;
       }
 
       const newHistory = [...currentHistory, { persona, text: fullResponse, round }];
@@ -231,7 +287,7 @@ export default function DebatesPage() {
       const nextIdx = pIdx + 1;
       if (nextIdx < PERSONA_ORDER.length) {
         setActivePersonaIdx(nextIdx);
-        startNextTurn(round, nextIdx, newHistory, debateId);
+        void startNextTurn(round, nextIdx, newHistory, debateId, runToken);
         return;
       }
 
@@ -240,26 +296,43 @@ export default function DebatesPage() {
         setCurrentRound(nextRound);
         setViewRound(nextRound);
         setActivePersonaIdx(0);
-        startNextTurn(nextRound, 0, newHistory, debateId);
+        void startNextTurn(nextRound, 0, newHistory, debateId, runToken);
         return;
       }
 
       setStatus("awaiting_judge");
     } catch (error) {
+      if (controller.signal.aborted || !isRunCurrent(runToken)) {
+        return;
+      }
+
       console.error(error);
       setStreamingText("");
       setHasTurnError(true);
+    } finally {
+      if (debateAbortRef.current === controller) {
+        debateAbortRef.current = null;
+      }
     }
   };
 
-  const runJudgeModel = async (fullHistory: ResponseLog[]) => {
+  const runJudgeModel = async (fullHistory: ResponseLog[], runToken: number) => {
+    if (!isRunCurrent(runToken)) {
+      return;
+    }
+
+    judgeAbortRef.current?.abort();
+    const controller = new AbortController();
+    judgeAbortRef.current = controller;
     setJudgeStatus("evaluating");
     setStatus("results");
 
-    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
     if (isDemoMode) {
       await sleep(1800);
+      if (!isRunCurrent(runToken)) {
+        return;
+      }
+
       setJudgeScores({
         summary:
           "Justice Nyay judged this simulation as a balanced exchange with clear ideological contrast. Sage won by reframing the strongest claims from both sides into a more coherent synthesis instead of merely countering them. Aria remained the most emotionally persuasive voice, while Lex maintained the sharpest analytical discipline. Rex stayed forceful and grounded, but lost points when the debate shifted toward integration rather than conviction.",
@@ -300,6 +373,7 @@ export default function DebatesPage() {
         ],
       });
       setJudgeStatus("done");
+      setStatus("finished");
       return;
     }
 
@@ -308,6 +382,7 @@ export default function DebatesPage() {
         method: "POST",
         headers: buildRequestHeaders(currentDebateId ?? createDebateId()),
         body: JSON.stringify({ topic, history: fullHistory, totalRounds: targetRounds }),
+        signal: controller.signal,
       });
 
       if (!res.ok) {
@@ -315,11 +390,24 @@ export default function DebatesPage() {
       }
 
       const data: JudgeScores = await res.json();
+      if (!isRunCurrent(runToken)) {
+        return;
+      }
+
       setJudgeScores(data);
       setJudgeStatus("done");
+      setStatus("finished");
     } catch (error) {
+      if (controller.signal.aborted || !isRunCurrent(runToken)) {
+        return;
+      }
+
       console.error(error);
       setJudgeStatus("error");
+    } finally {
+      if (judgeAbortRef.current === controller) {
+        judgeAbortRef.current = null;
+      }
     }
   };
 
@@ -561,7 +649,7 @@ export default function DebatesPage() {
               ) : (
                 <div className="status-badge">
                   {status === "finished"
-                    ? "Transcript Ready"
+                    ? "Verdict Ready"
                     : hasTurnError
                       ? "Turn Failed"
                       : `${activePersonaName} speaking`}
@@ -598,14 +686,14 @@ export default function DebatesPage() {
               <motion.button
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                onClick={() => runJudgeModel(history)}
+                onClick={() => void runJudgeModel(history, activeRunRef.current)}
                 className="inline-flex items-center gap-2 rounded-full border border-yellow-500/40 bg-gradient-to-r from-yellow-600/30 to-amber-500/30 px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-yellow-200 shadow-[0_0_14px_rgba(202,138,4,0.3)] transition-all hover:border-yellow-400/60 hover:from-yellow-600/45 hover:to-amber-500/45 hover:text-yellow-100"
               >
                 <Scale className="h-3.5 w-3.5" />
                 Send to Judge
               </motion.button>
             )}
-            {(status === "finished") && (
+            {status === "finished" && (
               <button
                 onClick={() => setStatus("results")}
                 className="btn-primary py-2 px-4 text-[0.62rem]"
@@ -768,7 +856,7 @@ export default function DebatesPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => setStatus("finished")}
+              onClick={() => setStatus(judgeStatus === "done" ? "finished" : "awaiting_judge")}
               className="btn-ghost"
             >
               View Debate
@@ -783,7 +871,7 @@ export default function DebatesPage() {
         </div>
       </div>
 
-      <JudgeResults scores={judgeScores} status={judgeStatus} onRetry={() => runJudgeModel(history)} />
+      <JudgeResults scores={judgeScores} status={judgeStatus} onRetry={() => void runJudgeModel(history, activeRunRef.current)} />
     </motion.section>
   );
 
