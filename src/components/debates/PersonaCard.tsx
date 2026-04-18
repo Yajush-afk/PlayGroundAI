@@ -17,14 +17,18 @@ export const PERSONA_CONFIG: Record<Persona, { color: string; bgLight: string; r
 
 interface PersonaCardProps {
   name: Persona;
-  status: "idle" | "typing" | "done" | "error";
+  status: "idle" | "thinking" | "streaming" | "cooldown" | "retrying" | "done" | "error";
   text: string;
   onRetry?: () => void;
   isActiveTurn?: boolean;
+  phaseLabel?: string;
+  retryCountdown?: number;
+  cooldownText?: string;
 }
 
-export function PersonaCard({ name, status, text, onRetry, isActiveTurn }: PersonaCardProps) {
+export function PersonaCard({ name, status, text, onRetry, isActiveTurn, phaseLabel, retryCountdown, cooldownText }: PersonaCardProps) {
   const config = PERSONA_CONFIG[name];
+  const isLivePhase = status === "thinking" || status === "streaming" || status === "cooldown" || status === "retrying";
 
   return (
     <div
@@ -54,16 +58,26 @@ export function PersonaCard({ name, status, text, onRetry, isActiveTurn }: Perso
         </div>
       </div>
 
+      {phaseLabel ? (
+        <div className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 font-mono text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+          {phaseLabel}
+          {status === "cooldown" && retryCountdown ? ` · ${retryCountdown}s` : ""}
+        </div>
+      ) : null}
+
       <div className="flex-1 text-sm leading-relaxed text-card-foreground/90 whitespace-pre-wrap">
         {text ? (
           <>
             {text}
-            {status === "typing" && (
+            {status === "streaming" && (
               <span className="inline-block w-1.5 h-4 ml-1 bg-current align-middle animate-blink" />
             )}
           </>
-        ) : status === "typing" ? (
-          <span className="inline-block w-1.5 h-4 bg-current align-middle animate-blink" />
+        ) : isLivePhase ? (
+          <div className="space-y-2 text-muted-foreground">
+            <p>{cooldownText ?? phaseLabel ?? `${name} is thinking.`}</p>
+            {status === "streaming" ? <span className="inline-block h-4 w-1.5 animate-blink bg-current align-middle" /> : null}
+          </div>
         ) : status === "error" ? (
           <div className="flex flex-col items-start gap-2 text-destructive">
             <span>{name} is thinking too hard — retry this round?</span>

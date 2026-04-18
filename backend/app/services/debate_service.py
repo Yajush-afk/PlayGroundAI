@@ -19,11 +19,12 @@ class DebateService:
             current_round=payload.current_round,
             total_rounds=payload.total_rounds,
             history=payload.history,
+            challenge_card_text=payload.challenge_card_text,
         )
         messages = [{"role": "user", "content": prompt}]
         return await self.groq_client.open_chat_completion_stream(
             model=contract.model,
             messages=messages,
             temperature=0.85,
-            max_tokens=180,
+            max_tokens=120,
         )

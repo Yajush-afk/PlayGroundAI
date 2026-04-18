@@ -18,3 +18,12 @@ def test_openapi_documents_detail_error_shape() -> None:
 
     assert "detail" in error_response["properties"]
     assert "error" not in error_response["properties"]
+
+
+def test_openapi_includes_debate_challenge_card_and_judge_profile() -> None:
+    schema = client.get("/openapi.json").json()
+    debate_request = schema["components"]["schemas"]["DebateTurnRequest"]
+    judge_request = schema["components"]["schemas"]["JudgeRequest"]
+
+    assert "challengeCardText" in debate_request["properties"]
+    assert "judgeProfile" in judge_request["properties"]

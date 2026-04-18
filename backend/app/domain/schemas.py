@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 PersonaName = Literal["Aria", "Lex", "Sage", "Rex"]
 RoundCount = Literal[3, 5, 7]
+DebateStage = Literal["opening", "rebuttal", "crossfire", "closing"]
+JudgeProfile = Literal["balanced", "logic_first", "crowd_favorite"]
 
 
 class DebateTurnHistoryEntry(BaseModel):
@@ -24,6 +26,13 @@ class DebateTurnRequest(BaseModel):
     current_round: int = Field(validation_alias="currentRound", serialization_alias="currentRound", ge=1)
     total_rounds: RoundCount = Field(validation_alias="totalRounds", serialization_alias="totalRounds")
     history: list[DebateTurnHistoryEntry] = Field(default_factory=list)
+    challenge_card_text: str | None = Field(
+        default=None,
+        validation_alias="challengeCardText",
+        serialization_alias="challengeCardText",
+        min_length=1,
+        max_length=120,
+    )
 
 
 class JudgeHistoryEntry(BaseModel):
@@ -40,6 +49,11 @@ class JudgeRequest(BaseModel):
     topic: str = Field(min_length=1, max_length=200)
     history: list[JudgeHistoryEntry] = Field(min_length=1)
     total_rounds: RoundCount = Field(validation_alias="totalRounds", serialization_alias="totalRounds")
+    judge_profile: JudgeProfile = Field(
+        default="balanced",
+        validation_alias="judgeProfile",
+        serialization_alias="judgeProfile",
+    )
 
 
 class ScoreBreakdown(BaseModel):
@@ -67,6 +81,7 @@ class JudgeScoresResponse(BaseModel):
     summary: str = Field(min_length=1, max_length=2000)
     winner: PersonaName
     strongest_moment: str = Field(validation_alias="strongestMoment", serialization_alias="strongestMoment", min_length=1, max_length=500)
+    best_exchange: str = Field(validation_alias="bestExchange", serialization_alias="bestExchange", min_length=1, max_length=500)
     conclusion: str = Field(min_length=1, max_length=1000)
     evaluations: list[Evaluation] = Field(min_length=4, max_length=4)
 

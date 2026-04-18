@@ -16,7 +16,7 @@ class JudgeService:
         self.repository = repository
 
     async def judge_debate(self, payload: JudgeRequest) -> JudgeScoresResponse:
-        prompt = build_judge_prompt(payload.topic, payload.history)
+        prompt = build_judge_prompt(payload.topic, payload.history, payload.judge_profile)
         result = await self.gemini_client.generate_judgment(prompt)
 
         if self.repository is not None:
