@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Flame, RotateCcw, Scale, Sparkles } from "lucide-react";
 import { Persona, PERSONA_CONFIG } from "@/components/debates/PersonaCard";
 import { JudgeResults, JudgeScores } from "@/components/debates/JudgeResults";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, getApiBaseUrl } from "@/lib/api";
 import { getOrCreateSessionId } from "@/lib/session";
 
 type DebateStatus = "setup" | "debating" | "round_break" | "awaiting_judge" | "finished" | "results";
@@ -105,6 +105,7 @@ export default function DebatesPage() {
   const [history, setHistory] = useState<ResponseLog[]>([]);
   const [streamingText, setStreamingText] = useState("");
   const [hasTurnError, setHasTurnError] = useState(false);
+  const [turnErrorMessage, setTurnErrorMessage] = useState("Turn failed — retry to continue.");
 
   const [turnUiPhase, setTurnUiPhase] = useState<TurnUiPhase>("idle");
   const [turnPhaseLabel, setTurnPhaseLabel] = useState("");
@@ -173,6 +174,7 @@ export default function DebatesPage() {
     setHistory([]);
     setStreamingText("");
     setHasTurnError(false);
+    setTurnErrorMessage("Turn failed — retry to continue.");
     setTurnUiPhase("idle");
     setTurnPhaseLabel("");
     setCooldownSeconds(0);
@@ -273,6 +275,31 @@ export default function DebatesPage() {
     setCooldownSeconds(0);
   };
 
+  const formatTurnError = async (response: Response): Promise<string> => {
+    const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+    const apiBaseUrl = getApiBaseUrl();
+    const usesSameOriginFallback = !apiBaseUrl;
+
+    if (response.status === 404 && contentType.includes("text/html")) {
+      if (usesSameOriginFallback) {
+        return "Debate API not reachable. Add NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 to .env.local and restart Next.js.";
+      }
+
+      return `Debate API returned 404 from ${apiBaseUrl}. Check that the FastAPI server is running on the configured URL.`;
+    }
+
+    const errorText = (await response.text()).trim();
+    if (!errorText) {
+      return `Debate API request failed with status ${response.status}.`;
+    }
+
+    if (contentType.includes("text/html")) {
+      return `Debate API returned HTML instead of the expected stream. Check NEXT_PUBLIC_API_BASE_URL and confirm the backend is running.`;
+    }
+
+    return errorText;
+  };
+
   const handleStart = () => {
     if (!topic.trim()) return;
     const debateId = createDebateId();
@@ -326,6 +353,7 @@ export default function DebatesPage() {
     setCurrentStage(stage);
     setStreamingText("");
     setHasTurnError(false);
+    setTurnErrorMessage("Turn failed — retry to continue.");
     setCooldownSeconds(0);
     setTurnUiPhase("thinking");
     setTurnPhaseLabel(thinkingLabel);
@@ -429,7 +457,7 @@ export default function DebatesPage() {
       }
 
       if (!res.ok) {
-        throw new Error(await res.text());
+        throw new Error(await formatTurnError(res));
       }
 
       if (!res.body) {
@@ -519,6 +547,7 @@ export default function DebatesPage() {
       console.error(error);
       setStreamingText("");
       setHasTurnError(true);
+      setTurnErrorMessage(error instanceof Error ? error.message : "Turn failed — retry to continue.");
       setTurnUiPhase("error");
       setTurnPhaseLabel("Turn failed");
     } finally {
@@ -639,13 +668,6 @@ export default function DebatesPage() {
           <h1 className="font-display text-3xl leading-tight text-foreground sm:text-4xl">
             Choose a topic and let the arena run.
           </h1>
-
-          <div className="rounded-[1.3rem] border border-amber-500/20 bg-amber-500/[0.06] p-4">
-            <p className="font-mono text-[0.58rem] uppercase tracking-[0.18em] text-amber-200">Public Usage Note</p>
-            <p className="mt-2 text-sm leading-6 text-amber-50/78">
-              A full 3-round public debate uses 12 model turns before judgment. Keep topics tight and rounds scarce while the arena is still on a budget.
-            </p>
-          </div>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-4">
@@ -1162,7 +1184,7 @@ export default function DebatesPage() {
                       animate={{ opacity: 1 }}
                       className="rounded-xl border border-destructive/25 bg-destructive/8 px-4 py-4"
                     >
-                      <p className="text-sm font-medium text-destructive">Turn failed — retry to continue.</p>
+                      <p className="text-sm font-medium text-destructive">{turnErrorMessage}</p>
                       <button
                         onClick={retryCurrentTurn}
                         className="mt-3 rounded-full border border-destructive/40 bg-destructive px-4 py-2 font-mono text-[0.58rem] uppercase tracking-[0.18em] text-white transition-colors hover:bg-destructive/90"
