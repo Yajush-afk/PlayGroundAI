@@ -9,8 +9,12 @@ from app.middleware.rate_limit import InMemoryRateLimiter
 from app.providers.gemini_client import GeminiClient
 from app.providers.groq_client import GroqClient
 from app.repositories.debates import DebatesRepository
+from app.repositories.league import LeagueRepository
 from app.services.debate_service import DebateService
 from app.services.judge_service import JudgeService
+from app.services.league_service import LeagueService
+from app.services.match_runner import MatchRunner
+from app.services.quota_service import QuotaService
 from app.services.usage_service import SessionUsageService
 
 
@@ -51,6 +55,40 @@ def get_judge_service() -> JudgeService:
             timeout_seconds=settings.judge_timeout_seconds,
         ),
         repository=repository,
+    )
+
+
+@lru_cache(maxsize=1)
+def get_league_repository() -> LeagueRepository:
+    settings = get_settings()
+    if not settings.supabase_url or not settings.supabase_service_role_key:
+        raise HTTPException(status_code=503, detail="Supabase is required for league features")
+    return LeagueRepository(
+        supabase_url=settings.supabase_url,
+        supabase_key=settings.supabase_service_role_key,
+        timeout_seconds=settings.request_timeout_seconds,
+    )
+
+
+@lru_cache(maxsize=1)
+def get_league_service() -> LeagueService:
+    settings = get_settings()
+    repository = get_league_repository()
+    return LeagueService(
+        settings=settings,
+        repository=repository,
+        quota_service=QuotaService(settings=settings, repository=repository),
+        match_runner=MatchRunner(
+            settings=settings,
+            groq_client=GroqClient(
+                api_key=settings.groq_api_key,
+                timeout_seconds=settings.request_timeout_seconds,
+            ),
+            gemini_client=GeminiClient(
+                api_key=settings.google_ai_api_key,
+                timeout_seconds=settings.judge_timeout_seconds,
+            ),
+        ),
     )
 
 

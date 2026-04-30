@@ -39,6 +39,26 @@ class GeminiClient:
             repaired_text = await self._request_text(repair_prompt)
             return self._validate_candidate(repaired_text)
 
+    async def generate_json(self, prompt: str) -> dict[str, Any]:
+        if not self.api_key:
+            raise ProviderAuthError("Missing GOOGLE_AI_API_KEY")
+
+        initial_text = await self._request_text(prompt)
+        try:
+            return json.loads(self._extract_json(initial_text))
+        except (json.JSONDecodeError, ProviderValidationError):
+            repair_prompt = (
+                f"{prompt}\n\n"
+                "The previous response was not valid JSON. Return ONLY one valid JSON object. "
+                "Do not add markdown or commentary.\n\n"
+                f"Invalid response:\n{initial_text}"
+            )
+            repaired_text = await self._request_text(repair_prompt)
+            try:
+                return json.loads(self._extract_json(repaired_text))
+            except json.JSONDecodeError as exc:
+                raise ProviderValidationError("Gemini returned invalid JSON") from exc
+
     async def _request_text(self, prompt: str) -> str:
         owns_client = self.http_client is None
         client = self.http_client or httpx.AsyncClient(timeout=httpx.Timeout(self.timeout_seconds, connect=10.0))
