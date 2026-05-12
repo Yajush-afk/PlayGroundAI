@@ -24,7 +24,7 @@ async def run_match(
         raise HTTPException(status_code=401, detail="Invalid admin league key")
 
     try:
-        result = await service.run_official_match(game_type=payload.game_type, dry_run=payload.dry_run)
+        result = await service.run_official_match(game_type=payload.game_type, dry_run=payload.dry_run, queue_only=payload.queue_only)
     except ProviderAuthError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
     except ProviderTimeoutError as exc:

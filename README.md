@@ -71,9 +71,19 @@ ANONYMOUS_DEBATES_PER_DAY=5
 ANONYMOUS_JUDGES_PER_DAY=5
 ANONYMOUS_MAX_ACTIVE_DEBATES=1
 ACTIVE_DEBATE_TTL_SECONDS=3600
+ADMIN_LEAGUE_KEY=
+OFFICIAL_LEAGUE_ENABLED=true
+OFFICIAL_DAILY_MATCH_CAP=20
+OFFICIAL_DAILY_REQUEST_CAP=120
+OFFICIAL_COOLDOWN_MINUTES=30
+OFFICIAL_AUTO_RUN_ENABLED=false
+OFFICIAL_AUTO_RUN_INTERVAL_SECONDS=900
+OFFICIAL_AUTO_RUN_INITIAL_DELAY_SECONDS=15
 ```
 
 Supabase is optional for demo deployment.
+
+League mode requires Supabase. Apply `backend/supabase_schema.sql` before generating official matches.
 
 ## Local Run
 
@@ -95,6 +105,58 @@ Backend tests:
 ```bash
 conda run -n playground pytest backend/tests
 ```
+
+## Official League Admin Workflow
+
+Official matches are generated through a protected admin flow. Public visitors only replay stored matches.
+
+Docs:
+
+```bash
+docs/league-admin.md
+```
+
+Hidden local admin page:
+
+```bash
+http://localhost:3000/admin/league
+```
+
+Dry-run command:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/admin/league/run-match" \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-League-Key: $ADMIN_LEAGUE_KEY" \
+  -d '{"gameType":"auto","dryRun":true}'
+```
+
+Real match command:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/admin/league/run-match" \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-League-Key: $ADMIN_LEAGUE_KEY" \
+  -d '{"gameType":"auto","dryRun":false}'
+```
+
+Queue-only command for the homepage Up Next slot:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/admin/league/run-match" \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-League-Key: $ADMIN_LEAGUE_KEY" \
+  -d '{"gameType":"auto","dryRun":false,"queueOnly":true}'
+```
+
+To run the official league live from the backend, set:
+
+```bash
+OFFICIAL_AUTO_RUN_ENABLED=true
+OFFICIAL_AUTO_RUN_INTERVAL_SECONDS=900
+```
+
+With the default interval, the backend attempts one official match every 15 minutes. Quota caps, provider cooldowns, and DB locks still apply.
 
 ## Deployment Roots
 
@@ -158,6 +220,14 @@ ANONYMOUS_DEBATES_PER_DAY=5
 ANONYMOUS_JUDGES_PER_DAY=5
 ANONYMOUS_MAX_ACTIVE_DEBATES=1
 ACTIVE_DEBATE_TTL_SECONDS=3600
+ADMIN_LEAGUE_KEY=...
+OFFICIAL_LEAGUE_ENABLED=true
+OFFICIAL_DAILY_MATCH_CAP=20
+OFFICIAL_DAILY_REQUEST_CAP=120
+OFFICIAL_COOLDOWN_MINUTES=30
+OFFICIAL_AUTO_RUN_ENABLED=false
+OFFICIAL_AUTO_RUN_INTERVAL_SECONDS=900
+OFFICIAL_AUTO_RUN_INITIAL_DELAY_SECONDS=15
 ```
 
 Optional env vars:

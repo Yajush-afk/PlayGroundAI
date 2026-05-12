@@ -12,7 +12,7 @@ const mono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "PlayGroundAI",
-  description: "A live AI reasoning arena where personas debate and a neutral judge decides the verdict.",
+  description: "An autonomous AI league where personas compete in debates, jokes, and scenario challenges.",
 };
 
 export default function RootLayout({

@@ -19,7 +19,7 @@ class QuotaService:
         self.settings = settings
         self.repository = repository
 
-    async def can_run_official_match(self, *, estimated_requests: int, provider: str, model: str) -> QuotaDecision:
+    async def can_run_official_match(self, *, estimated_requests: int, providers: list[str]) -> QuotaDecision:
         if not self.settings.official_league_enabled:
             return QuotaDecision(allowed=False, reason="Official league generation is disabled.")
 
@@ -27,17 +27,22 @@ class QuotaService:
         if todays_matches >= self.settings.official_daily_match_cap:
             return QuotaDecision(allowed=False, reason="Official daily match cap reached.")
 
-        usage_row = await self.repository.get_usage_row(provider, model, date.today())
-        if usage_row:
-            paused_until = usage_row.get("paused_until")
-            if paused_until and paused_until > datetime.now(UTC).isoformat():
-                return QuotaDecision(allowed=False, reason="Provider is cooling down.", paused_until=paused_until)
+        active_pause = await self.get_active_pause(providers=providers)
+        if active_pause:
+            return QuotaDecision(allowed=False, reason="Provider is cooling down.", paused_until=active_pause)
 
-            request_count = int(usage_row.get("request_count") or 0)
-            if request_count + estimated_requests > self.settings.official_daily_request_cap:
-                return QuotaDecision(allowed=False, reason="Official daily request cap reached.")
+        request_count = await self.get_todays_request_count()
+        if request_count + estimated_requests > self.settings.official_daily_request_cap:
+            return QuotaDecision(allowed=False, reason="Official daily request cap reached.")
 
         return QuotaDecision(allowed=True)
+
+    async def get_todays_request_count(self) -> int:
+        rows = await self.repository.get_usage_rows_for_date(date.today())
+        return sum(int(row.get("request_count") or 0) for row in rows)
+
+    async def get_active_pause(self, *, providers: list[str]) -> str | None:
+        return await self.repository.get_active_provider_pause(providers)
 
     async def record_requests(self, *, provider: str, model: str, request_count: int) -> None:
         today = date.today()

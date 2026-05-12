@@ -5,7 +5,8 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from app.core.config import Settings
-from app.domain.league_schemas import AdminGameType, AdminRunMatchResponse, GameType, LeagueStateResponse, LeagueStatus
+from app.domain.league_prompts import pick_prompt
+from app.domain.league_schemas import AdminGameType, AdminRunMatchResponse, GameType, LeagueStateResponse, LeagueStatus, LiveLeagueResponse
 from app.providers.base import ProviderRateLimitError
 from app.repositories.league import LeagueRepository
 from app.services.match_runner import MatchRunner
@@ -24,15 +25,38 @@ class LeagueService:
         season_id = season["id"] if season else None
         latest_matches = await self.repository.get_latest_matches(limit=8)
         leaderboard = await self.repository.get_leaderboard(season_id=season_id, game_type=None)
+        paused_until = await self.quota_service.get_active_pause(providers=self._official_providers())
         return LeagueStateResponse(
             season=season,
             leaderboard=leaderboard,
             latestMatches=latest_matches,
             leagueStatus=LeagueStatus(
                 generationEnabled=self.settings.official_league_enabled,
-                coolingDown=False,
-                pausedUntil=None,
-                nextRecommendedRunAt=None,
+                coolingDown=paused_until is not None,
+                pausedUntil=paused_until,
+                nextRecommendedRunAt=paused_until,
+            ),
+        )
+
+    async def get_live_state(self) -> LiveLeagueResponse:
+        season = await self.repository.get_active_season()
+        season_id = season["id"] if season else None
+        leaderboard = await self.repository.get_leaderboard(season_id=season_id, game_type=None)
+        paused_until = await self.quota_service.get_active_pause(providers=self._official_providers())
+        current_match = await self.repository.get_latest_match_by_status(["running", "judging"])
+        previous_match = await self.repository.get_latest_match_by_status(["completed"])
+        up_next = await self.repository.get_latest_match_by_status(["queued"])
+
+        return LiveLeagueResponse(
+            currentMatch=current_match,
+            previousMatch=previous_match,
+            upNext=up_next,
+            leaderboard=leaderboard,
+            leagueStatus=LeagueStatus(
+                generationEnabled=self.settings.official_league_enabled,
+                coolingDown=paused_until is not None,
+                pausedUntil=paused_until,
+                nextRecommendedRunAt=paused_until,
             ),
         )
 
@@ -45,13 +69,12 @@ class LeagueService:
     async def get_leaderboard(self, *, season_id: str | None, game_type: GameType | None) -> list[dict]:
         return await self.repository.get_leaderboard(season_id=season_id, game_type=game_type)
 
-    async def run_official_match(self, *, game_type: AdminGameType, dry_run: bool) -> AdminRunMatchResponse:
+    async def run_official_match(self, *, game_type: AdminGameType, dry_run: bool, queue_only: bool = False) -> AdminRunMatchResponse:
         selected_game = await self._select_game(game_type)
         estimated_requests = self.match_runner.estimate_requests(selected_game)
         quota = await self.quota_service.can_run_official_match(
             estimated_requests=estimated_requests,
-            provider=self.settings.official_participant_provider,
-            model=self.settings.official_participant_model_fast,
+            providers=self._official_providers(),
         )
         if not quota.allowed:
             return AdminRunMatchResponse(
@@ -65,6 +88,26 @@ class LeagueService:
         if dry_run:
             return AdminRunMatchResponse(status="skipped", reason="Dry run passed.", gameType=selected_game, estimatedRequests=estimated_requests)
 
+        if queue_only:
+            season = await self.repository.get_active_season()
+            if not season:
+                return AdminRunMatchResponse(status="skipped", reason="No active season exists.", gameType=selected_game)
+            queued_prompt = pick_prompt(selected_game, await self.repository.count_todays_official_matches())
+            created = await self.repository.create_match(
+                {
+                    "season_id": season["id"],
+                    "league_type": "official",
+                    "game_type": selected_game,
+                    "status": "queued",
+                    "prompt": queued_prompt,
+                    "topic": queued_prompt if selected_game == "debate" else None,
+                    "participant_model": self.settings.official_participant_model_fast,
+                    "judge_model": self.settings.official_judge_model,
+                    "total_estimated_requests": estimated_requests,
+                }
+            )
+            return AdminRunMatchResponse(status="queued", matchId=created["id"], gameType=selected_game, estimatedRequests=estimated_requests)
+
         lock_owner = str(uuid4())
         lock_until = (datetime.now(UTC) + timedelta(minutes=15)).isoformat()
         acquired = await self.repository.acquire_lock("official_match_generation", lock_owner, lock_until)
@@ -77,7 +120,19 @@ class LeagueService:
             )
 
         match_id: str | None = None
+        provider_locks: list[str] = []
         try:
+            for lock_id in self._provider_lock_ids():
+                provider_acquired = await self.repository.acquire_lock(lock_id, lock_owner, lock_until)
+                if not provider_acquired:
+                    return AdminRunMatchResponse(
+                        status="skipped",
+                        reason=f"Provider lock {lock_id} is already active.",
+                        gameType=selected_game,
+                        estimatedRequests=estimated_requests,
+                    )
+                provider_locks.append(lock_id)
+
             season = await self.repository.get_active_season()
             if not season:
                 return AdminRunMatchResponse(status="skipped", reason="No active season exists.", gameType=selected_game)
@@ -98,6 +153,7 @@ class LeagueService:
             match_id = created["id"]
 
             artifact = await self.match_runner.run(selected_game, prompt_index=await self.repository.count_todays_official_matches())
+            await self.repository.update_match(match_id, {"status": "judging", "prompt": artifact.prompt, "topic": artifact.topic})
             await self.repository.update_match(
                 match_id,
                 {
@@ -113,13 +169,14 @@ class LeagueService:
                 [
                     {
                         "match_id": match_id,
-                        "round_index": 1,
-                        "round_type": selected_game,
-                        "pair_key": None,
-                        "prompt": artifact.prompt,
-                        "entries": [entry.model_dump(mode="json") for entry in artifact.entries],
-                        "judge_result": artifact.judge_result.model_dump(by_alias=True, mode="json"),
+                        "round_index": round_artifact.round_index,
+                        "round_type": round_artifact.round_type,
+                        "pair_key": round_artifact.pair_key,
+                        "prompt": round_artifact.prompt,
+                        "entries": [entry.model_dump(mode="json") for entry in round_artifact.entries],
+                        "judge_result": round_artifact.judge_result,
                     }
+                    for round_artifact in artifact.rounds
                 ]
             )
 
@@ -154,17 +211,23 @@ class LeagueService:
                     won=evaluation.persona == artifact.judge_result.winner,
                 )
             await self.repository.insert_participants(participant_rows)
-            await self.quota_service.record_requests(
-                provider=self.settings.official_participant_provider,
-                model=self.settings.official_participant_model_fast,
-                request_count=estimated_requests,
-            )
+            for provider, request_count in self.match_runner.estimate_provider_requests(selected_game).items():
+                await self.quota_service.record_requests(
+                    provider=provider,
+                    model=self._usage_model_for_provider(provider),
+                    request_count=request_count,
+                )
             return AdminRunMatchResponse(status="completed", matchId=match_id, gameType=selected_game, estimatedRequests=estimated_requests)
         except ProviderRateLimitError:
-            paused_until = await self.quota_service.pause_provider(
-                provider=self.settings.official_participant_provider,
-                model=self.settings.official_participant_model_fast,
-            )
+            paused_until_values = []
+            for provider in self._official_providers():
+                paused_until_values.append(
+                    await self.quota_service.pause_provider(
+                        provider=provider,
+                        model=self._usage_model_for_provider(provider),
+                    )
+                )
+            paused_until = max(paused_until_values)
             if match_id:
                 await self.repository.update_match(match_id, {"status": "failed", "failure_reason": "Provider rate limit", "completed_at": datetime.now(UTC).isoformat()})
             return AdminRunMatchResponse(
@@ -180,9 +243,23 @@ class LeagueService:
                 await self.repository.update_match(match_id, {"status": "failed", "failure_reason": str(exc), "completed_at": datetime.now(UTC).isoformat()})
             raise
         finally:
+            for lock_id in provider_locks:
+                await self.repository.release_lock(lock_id, lock_owner)
             await self.repository.release_lock("official_match_generation", lock_owner)
 
     async def _select_game(self, requested: AdminGameType) -> GameType:
         if requested != "auto":
             return requested
         return random.choices(["debate", "joke", "scenario"], weights=[40, 40, 20], k=1)[0]
+
+    def _official_providers(self) -> list[str]:
+        providers = [self.settings.official_participant_provider, "gemini"]
+        return list(dict.fromkeys(providers))
+
+    def _provider_lock_ids(self) -> list[str]:
+        return [f"{provider}_provider" for provider in self._official_providers()]
+
+    def _usage_model_for_provider(self, provider: str) -> str:
+        if provider == "gemini":
+            return self.settings.official_judge_model
+        return self.settings.official_participant_model_fast

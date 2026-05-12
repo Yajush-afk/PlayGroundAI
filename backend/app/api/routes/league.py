@@ -14,6 +14,11 @@ async def league_state(service: LeagueService = Depends(get_league_service)):
     return (await service.get_state()).model_dump(by_alias=True)
 
 
+@router.get("/league/live")
+async def league_live(service: LeagueService = Depends(get_league_service)):
+    return (await service.get_live_state()).model_dump(by_alias=True)
+
+
 @router.get("/matches")
 async def list_matches(
     game_type: GameType | None = Query(default=None, alias="gameType"),

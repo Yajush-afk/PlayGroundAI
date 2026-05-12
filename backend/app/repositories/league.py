@@ -29,6 +29,16 @@ class LeagueRepository:
             f"/rest/v1/matches?league_type=eq.official&status=eq.completed{game_filter}&select=*&order=completed_at.desc&limit={limit}",
         )
 
+    async def get_latest_match_by_status(self, statuses: list[str]) -> dict[str, Any] | None:
+        if not statuses:
+            return None
+        status_filter = ",".join(statuses)
+        rows = await self._request(
+            "GET",
+            f"/rest/v1/matches?league_type=eq.official&status=in.({status_filter})&select=*&order=created_at.desc&limit=1",
+        )
+        return rows[0] if rows else None
+
     async def get_match(self, match_id: str) -> dict[str, Any] | None:
         rows = await self._request("GET", f"/rest/v1/matches?id=eq.{match_id}&select=*&limit=1")
         return rows[0] if rows else None
@@ -103,6 +113,28 @@ class LeagueRepository:
         )
         return rows[0] if rows else None
 
+    async def get_usage_rows_for_date(self, usage_date: date) -> list[dict[str, Any]]:
+        return await self._request(
+            "GET",
+            f"/rest/v1/api_usage_ledger?usage_date=eq.{usage_date.isoformat()}&select=*",
+        )
+
+    async def get_active_provider_pause(self, providers: list[str]) -> str | None:
+        rows = await self.get_usage_rows_for_date(date.today())
+        now = datetime.now(UTC)
+        active_pauses = []
+        provider_set = set(providers)
+        for row in rows:
+            if row.get("provider") not in provider_set:
+                continue
+            paused_until = self._parse_datetime(row.get("paused_until"))
+            if paused_until and paused_until > now:
+                active_pauses.append(paused_until)
+
+        if not active_pauses:
+            return None
+        return max(active_pauses).isoformat()
+
     async def upsert_usage_row(self, payload: dict[str, Any]) -> None:
         await self._request(
             "POST",
@@ -113,11 +145,12 @@ class LeagueRepository:
 
     async def acquire_lock(self, lock_id: str, locked_by: str, locked_until: str) -> bool:
         rows = await self._request("GET", f"/rest/v1/league_locks?id=eq.{lock_id}&select=*&limit=1")
-        now = datetime.now(UTC).isoformat()
+        now_dt = datetime.now(UTC)
+        now = now_dt.isoformat()
         if rows:
             current = rows[0]
-            current_until = current.get("locked_until")
-            if current_until and current_until > now:
+            current_until = self._parse_datetime(current.get("locked_until"))
+            if current_until and current_until > now_dt:
                 return False
             await self._request(
                 "PATCH",
@@ -213,3 +246,13 @@ class LeagueRepository:
         if response.status_code == 204 or not response.content:
             return []
         return response.json()
+
+    @staticmethod
+    def _parse_datetime(value: str | None) -> datetime | None:
+        if not value:
+            return None
+        normalized = value.replace("Z", "+00:00")
+        parsed = datetime.fromisoformat(normalized)
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
