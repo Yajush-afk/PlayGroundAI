@@ -26,7 +26,7 @@ create table if not exists matches (
   season_id uuid references seasons(id),
   league_type text not null check (league_type in ('official', 'custom')),
   game_type text not null check (game_type in ('debate', 'joke', 'scenario')),
-  status text not null check (status in ('queued', 'running', 'completed', 'failed')),
+  status text not null check (status in ('queued', 'running', 'judging', 'completed', 'failed')),
   prompt text not null,
   topic text,
   winner text,
@@ -39,6 +39,23 @@ create table if not exists matches (
   started_at timestamptz,
   completed_at timestamptz
 );
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.table_constraints
+    where constraint_schema = 'public'
+      and table_name = 'matches'
+      and constraint_name = 'matches_status_check'
+  ) then
+    alter table matches drop constraint matches_status_check;
+  end if;
+
+  alter table matches
+    add constraint matches_status_check
+    check (status in ('queued', 'running', 'judging', 'completed', 'failed'));
+end $$;
 
 create table if not exists match_participants (
   id uuid primary key default gen_random_uuid(),

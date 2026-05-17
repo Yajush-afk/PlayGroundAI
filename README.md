@@ -90,7 +90,7 @@ League mode requires Supabase. Apply `backend/supabase_schema.sql` before genera
 Frontend:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 Backend:
